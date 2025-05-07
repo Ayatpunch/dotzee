@@ -1,0 +1,29 @@
+{
+  "name": "zest-state-library",
+  "version": "0.1.0",
+  "description": "A Pinia-like reactive state library for React",
+  "main": "dist/index.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "echo \"Error: no build specified\" && exit 1",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "echo \"Error: no lint specified\" && exit 1",
+    "format": "echo \"Error: no format specified\" && exit 1"
+  },
+  "keywords": [
+    "react",
+    "state-management",
+    "pinia",
+    "proxy",
+    "typescript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "files": [
+    "dist"
+  ]
+}
