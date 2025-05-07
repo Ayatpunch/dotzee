@@ -6,10 +6,14 @@
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "echo \"Error: no build specified\" && exit 1",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "echo \"Error: no lint specified\" && exit 1",
-    "format": "echo \"Error: no format specified\" && exit 1"
+    "build": "npm run build:esm && npm run build:cjs",
+    "build:esm": "esbuild src/index.ts --bundle --outfile=dist/index.esm.js --platform=neutral --format=esm --target=es2020 --sourcemap",
+    "build:cjs": "esbuild src/index.ts --bundle --outfile=dist/index.js --platform=neutral --format=cjs --target=es2020 --sourcemap",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage",
+    "lint": "eslint . --ext .ts,.tsx --report-unused-disable-directives --max-warnings 0",
+    "format": "prettier --write ."
   },
   "keywords": [
     "react",
@@ -21,7 +25,16 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "esbuild": "^0.20.0",
+    "vitest": "^1.2.0",
+    "jsdom": "^24.0.0",
+    "eslint": "^8.50.0",
+    "prettier": "^3.0.0",
+    "@typescript-eslint/parser": "^6.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.10.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-prettier": "^5.0.0"
   },
   "files": [
     "dist"
