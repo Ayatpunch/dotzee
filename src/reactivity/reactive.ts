@@ -6,6 +6,12 @@
 const reactiveProxyMap = new WeakMap<object, any>();
 
 /**
+ * A WeakMap to store the original object for a given proxy.
+ * Keys are proxies, values are their original underlying objects.
+ */
+const proxyToOriginalMap = new WeakMap<any, object>();
+
+/**
  * A WeakMap to store subscribers for each reactive object.
  * Keys are original objects, values are a Set of callback functions (subscribers).
  */
@@ -70,42 +76,36 @@ export function reactive<T extends object>(target: T): T {
     });
 
     reactiveProxyMap.set(target, proxy);
+    proxyToOriginalMap.set(proxy, target);
     return proxy;
 }
 
 /**
- * Subscribes a callback function to changes in a reactive object.
- *
- * Note: For this to work correctly, the `target` passed here should be the
- * original object that was passed to `reactive()` or any of its nested objects.
- * The subscription is tied to the original object, not the proxy instance itself,
- * though the effect triggering happens based on mutations to the proxy.
+ * Subscribes a callback function to changes in a reactive object or its proxy.
  *
  * @template T Extends object
- * @param {T} target - The original object to subscribe to. Internally, the system tracks reactivity on original objects.
+ * @param {T} targetOrProxy - The object or its proxy to subscribe to.
  * @param {() => void} callback - The function to call when the object changes.
  * @returns {() => void} A function to unsubscribe the callback.
  */
-export function subscribe<T extends object>(target: T, callback: () => void): () => void {
-    // Ensure the target itself is reactive or part of a reactive structure,
-    // so that subscribersMap interactions are meaningful.
-    // If target is a proxy, we should ideally get its original target for consistent map keying.
-    // For simplicity now, we assume `target` is the key used in `triggerEffects`.
-    // This implies `target` in `subscribe` should be the same `targetObj` reference from the proxy handlers.
+export function subscribe<T extends object>(targetOrProxy: T, callback: () => void): () => void {
+    // Resolve the target to its original object if it's a known proxy
+    const originalTarget = proxyToOriginalMap.get(targetOrProxy) || targetOrProxy;
 
-    let subscribers = subscribersMap.get(target);
+    let subscribers = subscribersMap.get(originalTarget);
     if (!subscribers) {
         subscribers = new Set();
-        subscribersMap.set(target, subscribers);
+        subscribersMap.set(originalTarget, subscribers);
     }
     subscribers.add(callback);
-    // console.log(`Subscribed to target:`, target, `Callback: ${callback.name || 'anonymous'}`);
+    // console.log(`Subscribed to target:`, originalTarget, `Callback: ${callback.name || 'anonymous'}`);
 
     return () => {
-        // console.log(`Unsubscribing from target:`, target, `Callback: ${callback.name || 'anonymous'}`);
-        subscribers?.delete(callback);
-        if (subscribers?.size === 0) {
-            subscribersMap.delete(target);
+        // console.log(`Unsubscribing from target:`, originalTarget, `Callback: ${callback.name || 'anonymous'}`);
+        const currentSubscribers = subscribersMap.get(originalTarget);
+        currentSubscribers?.delete(callback);
+        if (currentSubscribers?.size === 0) {
+            subscribersMap.delete(originalTarget);
         }
     };
 } 

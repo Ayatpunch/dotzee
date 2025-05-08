@@ -21,11 +21,11 @@ src/
 │   └── index.ts        # Exports the public API of this module
 │
 ├── store/              # Store definition, management, and core logic
-│   ├── defineStore.ts  # The main `defineStore` function
+│   ├── defineZestStore.ts  # The main `defineZestStore` function
 │   ├── store.ts        # Internal logic for a single store instance
 │   ├── storeRegistry.ts# Manages store instances (singleton pattern)
 │   ├── types.ts        # TypeScript types specific to stores
-│   └── index.ts        # Exports `defineStore` and related types
+│   └── index.ts        # Exports `defineZestStore` and related types
 │
 ├── react/              # React integration hooks and utilities
 │   ├── useStore.ts     # The primary hook (e.g., useZestStore or use[StoreName])
@@ -59,9 +59,9 @@ src/
 
 This structure is a guideline and may be refined as development progresses and new requirements emerge.
 
-## Phase 1: Core Reactivity & Basic `defineStore` (MVP)
+## Phase 1: Core Reactivity & Basic `defineZestStore` (MVP)
 
-**Goal:** Establish the fundamental reactive engine and the initial `defineStore` API for basic state and synchronous actions.
+**Goal:** Establish the fundamental reactive engine and the initial `defineZestStore` API for basic state and synchronous actions.
 
 **Estimated Time:** 1.5 - 3 months
 
@@ -93,31 +93,31 @@ This structure is a guideline and may be refined as development progresses and n
 
 3.  **Store Implementation (`@store/core` or similar module):**
 
-    - [ ] Design the internal structure for a single store.
-    - [ ] Implement `defineStore(id, options)` function:
-      - [ ] `id`: Unique string identifier for the store.
-      - [ ] `options.state`: A function returning the initial state object.
-      - [ ] Create a reactive proxy for the state.
-    - [ ] Implement `options.actions`:
-      - [ ] Allow defining synchronous methods.
-      - [ ] Bind actions to the store instance so `this` refers to the state proxy.
-      - [ ] Mutations within actions should trigger the reactive core.
-    - [ ] Store registry:
-      - [ ] Internal mechanism to store and retrieve store instances by ID.
-      - [ ] Ensure singleton pattern for stores (per ID).
+    - [x] Design the internal structure for a single store.
+    - [x] Implement `defineZestStore(id, options)` function:
+      - [x] `id`: Unique string identifier for the store.
+      - [x] `options.state`: A function returning the initial state object.
+      - [x] Create a reactive proxy for the state.
+    - [x] Implement `options.actions`:
+      - [x] Allow defining synchronous methods.
+      - [x] Bind actions to the store instance so `this` refers to the state proxy.
+      - [x] Mutations within actions should trigger the reactive core.
+    - [x] Store registry:
+      - [x] Internal mechanism to store and retrieve store instances by ID.
+      - [x] Ensure singleton pattern for stores (per ID).
 
 4.  **React Integration (`@react-hooks` or similar module):**
 
-    - [ ] Create the main hook (e.g., `useStore(storeDefinition)` or `use[StoreName]()` derived from `defineStore`):
+    - [ ] Create the main hook (e.g., `useStore(storeDefinition)` or `use[StoreName]()` derived from `defineZestStore`):
       - [ ] Retrieves or creates the store instance.
       - [ ] Implements `useSyncExternalStore` to subscribe to store changes.
-        - [ ] `subscribe` function (passed to `useSyncExternalStore`) links to the store's subscription.
+        - [ ] `subscribe` function (passed to `useSyncExternalStore`) links to the store\'s subscription.
         - [ ] `getSnapshot` function (passed to `useSyncExternalStore`) returns the current state (or a relevant part).
     - [ ] Basic tests for component re-rendering on state change.
 
 5.  **Initial TypeScript Typing:**
 
-    - [ ] Basic generic types for `defineStore` to infer state type.
+    - [ ] Basic generic types for `defineZestStore` to infer state type.
     - [ ] Basic types for actions.
     - [ ] Type the return value of the `useStore` hook.
 
@@ -135,13 +135,13 @@ This structure is a guideline and may be refined as development progresses and n
 
 1.  **Getters (Computed Properties):**
 
-    - [ ] Add `options.getters` to `defineStore`.
+    - [ ] Add `options.getters` to `defineZestStore`.
     - [ ] Getters should be functions that take `state` as an argument.
     - [ ] Integrate getters into the store instance, making them accessible (e.g., `store.myGetter`).
     - [ ] Ensure getters are reactive:
       - [ ] Track dependencies (state properties accessed within the getter).
         - This will implement more fine-grained reactivity, where getters only re-evaluate if their specific property dependencies change.
-        - This also simplifies reacting to changes in nested state for derived values, as the getter's dependencies (e.g., `state.user.name`) are tracked automatically.
+        - This also simplifies reacting to changes in nested state for derived values, as the getter\'s dependencies (e.g., `state.user.name`) are tracked automatically.
       - [ ] Re-evaluate getters when their dependencies change.
     - [ ] Unit tests for getters (calculation, reactivity).
 
@@ -154,7 +154,7 @@ This structure is a guideline and may be refined as development progresses and n
 
 3.  **Advanced TypeScript Typing:**
 
-    - [ ] Refine `defineStore` generics for:
+    - [ ] Refine `defineZestStore` generics for:
       - [ ] Inferring state type `S`.
       - [ ] Inferring getters type `G` (and their return types).
       - [ ] Inferring actions type `A` (including parameters and return types of async functions).
@@ -182,7 +182,7 @@ This structure is a guideline and may be refined as development progresses and n
     - [ ] Send state snapshots and action information to DevTools:
       - [ ] Capture action name and payload.
       - [ ] Capture state before and after action (or just the diff).
-      - [ ] Format messages according to Redux DevTools expected action format (`{ type: 'storeId/actionName', payload: ... }`).
+      - [ ] Format messages according to Redux DevTools expected action format (`{ type: \'storeId/actionName\', payload: ... }`).
     - [ ] Handle DevTools messages (e.g., for time-travel).
 
 2.  **Action Patching/Interception (for DevTools):**
@@ -193,7 +193,7 @@ This structure is a guideline and may be refined as development progresses and n
 3.  **State Snapshots & Time Travel:**
 
     - [ ] Implement logic to capture serializable state snapshots.
-    - [ ] Implement logic to "jump" to a past state based on DevTools commands. This might involve re-setting the store's reactive proxy state. (This can be complex with direct mutation).
+    - [ ] Implement logic to "jump" to a past state based on DevTools commands. This might involve re-setting the store\'s reactive proxy state. (This can be complex with direct mutation).
     - [ ] Ensure DevTools can display the state tree.
 
 4.  **DevTools Configuration:**
@@ -214,8 +214,8 @@ This structure is a guideline and may be refined as development progresses and n
 
 1.  **Server-Side Rendering (SSR) Support:**
 
-    - [ ] Ensure `defineStore` can create fresh store instances per request on the server.
-      - [ ] Detect SSR environment (e.g., `typeof window === 'undefined'`).
+    - [ ] Ensure `defineZestStore` can create fresh store instances per request on the server.
+      - [ ] Detect SSR environment (e.g., `typeof window === \'undefined\'`).
       - [ ] Mechanism for providing a request-specific context or scope for stores.
     - [ ] State Serialization:
       - [ ] Provide a utility to get the current state of all active stores in a serializable format (e.g., JSON).
@@ -256,7 +256,7 @@ This structure is a guideline and may be refined as development progresses and n
 1.  **Advanced Reactivity Considerations (if needed):**
 
     - [ ] Investigate and implement memoization for getters if performance profiling indicates a need (e.g., using `proxy-memoize` concepts).
-    - [ ] Implement full, robust reactivity for `Map` and `Set` collections, including their specific methods (e.g., `map.set()`, `set.add()`, `map.get()`, `set.has()`, iteration, `size` property).
+    - [ ] Implement full, robust reactivity for `Map` and `Set` collections, including their specific methods (e.g., `map.set()`, `set.add()`, `map.get()`, `set.has()`, iteration, `size` property).\
     - [ ] Enhance array reactivity to robustly handle all common mutation methods (e.g., `push`, `pop`, `shift`, `unshift`, `splice`, `sort`, `reverse`) ensuring notifications are triggered consistently and correctly for direct state and getters.
     - [ ] Ensure robust handling of `Symbol` keys for all reactive operations, including their use in iteration and consideration for DevTools visibility if appropriate.
     - [ ] Investigate and implement reactivity for `Date` objects if common use cases require it (e.g., ensuring mutations to Date objects trigger effects).
@@ -279,7 +279,7 @@ This structure is a guideline and may be refined as development progresses and n
 4.  **Comprehensive Documentation:**
 
     - [ ] **Getting Started Guide:** Installation, basic usage.
-    - [ ] **Core Concepts:** Reactivity, `defineStore`, state, getters, actions.
+    - [ ] **Core Concepts:** Reactivity, `defineZestStore`, state, getters, actions.
     - [ ] **API Reference:** Detailed documentation for all public functions and types.
     - [ ] **Advanced Guides:** SSR, DevTools, Plugins, TypeScript usage, best practices.
     - [ ] **Examples:** Multiple real-world (though simplified) examples.
