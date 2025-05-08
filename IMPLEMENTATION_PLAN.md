@@ -9,6 +9,56 @@ Start discussing Phase n: ${Phase title} in more detail.
 Specifically look at Task n: Project Setup within Phase n and think about the tools and configurations.
 ```
 
+## Proposed Project Directory Structure
+
+This section outlines the anticipated directory structure for the `src` folder of the Zest library as it evolves through the development phases. This structure aims for modularity, clear separation of concerns, and maintainability.
+
+```text
+src/
+├── reactivity/         # Core Proxy-based reactivity engine
+│   ├── reactive.ts     # Main function to create reactive objects, subscription logic
+│   ├── effect.ts       # (Later) For dependency tracking & effects (e.g., for getters)
+│   └── index.ts        # Exports the public API of this module
+│
+├── store/              # Store definition, management, and core logic
+│   ├── defineStore.ts  # The main `defineStore` function
+│   ├── store.ts        # Internal logic for a single store instance
+│   ├── storeRegistry.ts# Manages store instances (singleton pattern)
+│   ├── types.ts        # TypeScript types specific to stores
+│   └── index.ts        # Exports `defineStore` and related types
+│
+├── react/              # React integration hooks and utilities
+│   ├── useStore.ts     # The primary hook (e.g., useZestStore or use[StoreName])
+│   # Potentially other React-specific utilities or hooks
+│   └── index.ts        # Exports the React hooks
+│
+├── devtools/           # DevTools Integration (e.g., with Redux DevTools Extension)
+│   ├── connector.ts    # Logic to connect to DevTools
+│   ├── formatters.ts   # Functions to format actions and state for DevTools
+│   └── index.ts        # Main setup/initialization for DevTools integration
+│
+├── ssr/                # Server-Side Rendering (SSR) Support
+│   ├── hydration.ts    # Client-side hydration logic
+│   ├── serialization.ts# Server-side state serialization logic
+│   └── index.ts        # Utilities and setup for SSR
+│
+├── plugins/            # Plugin System
+│   ├── createPlugin.ts # API for users to create plugins
+│   ├── pluginManager.ts# Internal logic to manage and apply plugins
+│   └── index.ts        # Exports plugin creation API
+│
+├── types/              # Global TypeScript types and interfaces for the library
+│   └── index.ts
+│
+├── utils/              # Common utility functions used across modules
+│   └── index.ts        # (e.g., isObject, warning messages, type guards)
+│
+└── index.ts            # Main public entry point of the Zest library
+                        # Re-exports the main user-facing APIs
+```
+
+This structure is a guideline and may be refined as development progresses and new requirements emerge.
+
 ## Phase 1: Core Reactivity & Basic `defineStore` (MVP)
 
 **Goal:** Establish the fundamental reactive engine and the initial `defineStore` API for basic state and synchronous actions.
@@ -28,14 +78,18 @@ Specifically look at Task n: Project Setup within Phase n and think about the to
 
 2.  **Reactive Core (`@reactivity/core` or similar module):**
 
-    - [ ] Implement Proxy-based reactivity for plain objects.
-      - [ ] Trap `get` operations for dependency tracking (initially conceptual, for getters).
-      - [ ] Trap `set` operations to trigger notifications.
-      - [ ] Handle nested objects/arrays.
-    - [ ] Implement a subscription mechanism:
-      - [ ] `subscribe(callback)` function.
-      - [ ] Notify subscribers on state mutations.
-    - [ ] Basic unit tests for reactivity (object mutation, notification).
+    - [x] Implement Proxy-based reactivity for plain objects.
+      - [x] Focus on plain objects and arrays for MVP; full reactivity for collections like `Map`, `Set` deferred (see Phase 5).
+      - [x] Trap `get` operations for dependency tracking (initially conceptual, for getters).
+        - Note: Initial `subscribe` mechanism is per-object. Full dependency tracking for getters is planned for Phase 2.
+      - [x] Trap `set` operations to trigger notifications.
+      - [x] Handle nested objects/arrays.
+        - Note: Current reactivity requires subscribing to the specific nested object reference for changes within it. Phase 2 Getters will simplify this for derived state.
+        - Note: Basic array reactivity (index assignment, length property) is included in MVP. Comprehensive handling of array mutation methods (e.g., `push`, `pop`, `splice`, `sort`) to ensure consistent reactivity will be fully addressed in Phase 5.
+    - [x] Implement a subscription mechanism:
+      - [x] `subscribe(callback)` function.
+      - [x] Notify subscribers on state mutations.
+    - [x] Basic unit tests for reactivity (object mutation, notification).
 
 3.  **Store Implementation (`@store/core` or similar module):**
 
@@ -86,8 +140,9 @@ Specifically look at Task n: Project Setup within Phase n and think about the to
     - [ ] Integrate getters into the store instance, making them accessible (e.g., `store.myGetter`).
     - [ ] Ensure getters are reactive:
       - [ ] Track dependencies (state properties accessed within the getter).
+        - This will implement more fine-grained reactivity, where getters only re-evaluate if their specific property dependencies change.
+        - This also simplifies reacting to changes in nested state for derived values, as the getter's dependencies (e.g., `state.user.name`) are tracked automatically.
       - [ ] Re-evaluate getters when their dependencies change.
-      - [ ] (Consider initial implementation: re-evaluate on access if dependencies might have changed. Defer complex memoization).
     - [ ] Unit tests for getters (calculation, reactivity).
 
 2.  **Asynchronous Actions:**
@@ -201,7 +256,12 @@ Specifically look at Task n: Project Setup within Phase n and think about the to
 1.  **Advanced Reactivity Considerations (if needed):**
 
     - [ ] Investigate and implement memoization for getters if performance profiling indicates a need (e.g., using `proxy-memoize` concepts).
-    - [ ] Handle edge cases in reactivity (e.g., `Map`, `Set`, `Date`, non-enumerable properties, symbol keys) if not fully covered.
+    - [ ] Implement full, robust reactivity for `Map` and `Set` collections, including their specific methods (e.g., `map.set()`, `set.add()`, `map.get()`, `set.has()`, iteration, `size` property).
+    - [ ] Enhance array reactivity to robustly handle all common mutation methods (e.g., `push`, `pop`, `shift`, `unshift`, `splice`, `sort`, `reverse`) ensuring notifications are triggered consistently and correctly for direct state and getters.
+    - [ ] Ensure robust handling of `Symbol` keys for all reactive operations, including their use in iteration and consideration for DevTools visibility if appropriate.
+    - [ ] Investigate and implement reactivity for `Date` objects if common use cases require it (e.g., ensuring mutations to Date objects trigger effects).
+    - [ ] Address reactivity for non-enumerable properties if specific use cases arise or for improved DevTools inspection.
+    - [ ] Handle other edge cases in reactivity if not fully covered by the above.
 
 2.  **API Review and Refinement:**
 
