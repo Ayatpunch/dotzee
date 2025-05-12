@@ -1,13 +1,19 @@
+import { track, trigger } from './computed';
+
 /**
  * Basic Ref type. Stores a value and allows subscribing to its changes.
  * It can also be linked to a store-level change trigger.
  */
+export const RefSymbol = Symbol('RefSymbol');
+
 export interface Ref<T = any> {
     value: T;
     /** @internal */
     _subscribers?: Set<() => void>;
     /** @internal */
     _triggerStoreChange?: (() => void); // Captured trigger (explicit or context)
+    /** @internal */
+    [RefSymbol]: true;
 }
 
 /**
@@ -59,35 +65,38 @@ export function ref<T>(initialValue: T, triggerStoreChange?: (() => void)): Ref<
     const refObject = {
         _subscribers: subscribers,
         _triggerStoreChange: effectiveTrigger, // Store the captured trigger
+        [RefSymbol]: true as const,
 
         get value(): T {
+            // Track dependency on the 'value' property of this ref object
+            track(this as Ref<any>, 'value');
             return _value;
         },
         set value(newValue: T) {
             if (!Object.is(_value, newValue)) {
+                const oldValue = _value;
                 _value = newValue;
 
-                // Notify direct subscribers
+                // Notify direct subscribers (remains coarse-grained for ref)
                 new Set(subscribers).forEach(cb => cb());
 
-                // Call the captured trigger if it exists
+                // Call the captured store trigger (coarse-grained)
                 if (refObject._triggerStoreChange) {
-                    // console.log('Triggering store change from ref set');
                     refObject._triggerStoreChange();
                 }
+                // Trigger fine-grained effects depending on ref.value
+                trigger(this as Ref<any>, 'value');
             }
         }
-    };
+    } as Ref<T>; // Assert type here for easier access in setters/getters
 
     refMap.set(refObject, true);
-    return refObject as Ref<T>;
+    return refObject;
 }
 
 /**
  * Subscribes a callback function directly to changes in a specific Ref's value.
- * Note: For React components, use the main store hook (`useStore`) instead, which relies
- * on the store-level change signal triggered by `_triggerStoreChange`. This function
- * is more for internal use or advanced scenarios like custom watchers.
+ * Note: This is coarse-grained, triggered by any change to .value.
  *
  * @template T
  * @param {Ref<T>} refInstance - The Ref object to subscribe to.

@@ -2,7 +2,26 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { defineZestStore, _test_storeRegistry } from './defineZestStore'; // Import registry
 import { ref, subscribeRef, isRef, Ref } from '../reactivity/ref';
 import { reactive, subscribe } from '../reactivity/reactive';
+import { computed, isComputed, ComputedRef } from '../reactivity/computed'; // Make sure ComputedRef is imported if needed
 import type { StoreInstance, StoreRegistryEntry, ZestStoreHook, StoreInstanceType } from './types';
+
+// Helper types for Setup Store tests
+interface CounterSetupStoreType {
+    count: Ref<number>;
+    name: Ref<string>;
+    increment: () => void;
+    add: (amount: number) => void;
+}
+
+interface MyStoreType {
+    user: Ref<{ name: string }>;
+    setUser: (newUser: { name: string }) => void;
+}
+
+interface MyStoreMutateType {
+    user: Ref<{ name: string }>;
+    setName: (newName: string) => void;
+}
 
 // Helper to get the change signal ref for a store ID directly from registry (still useful for some tests)
 const getStoreChangeSignalFromRegistry = (id: string): Ref<number> | undefined => {
@@ -23,59 +42,59 @@ describe('defineZestStore', () => {
     });
 
     // --- Common Hook Structure Tests --- //
-    const testHookStructure = <T extends StoreInstanceType>(useStoreHook: ZestStoreHook<T>, expectedId: string) => {
-        it('should return a hook function with $id and $changeSignal properties', () => {
-            expect(typeof useStoreHook).toBe('function');
-            expect(useStoreHook).toHaveProperty('$id');
-            expect(useStoreHook.$id).toBe(expectedId);
-            expect(useStoreHook).toHaveProperty('$changeSignal');
-            expect(isRef(useStoreHook.$changeSignal)).toBe(true);
-        });
+    const assertHookStructure = <T extends StoreInstanceType>(useStoreHook: ZestStoreHook<T>, expectedId: string) => {
+        expect(typeof useStoreHook).toBe('function');
+        expect(useStoreHook).toHaveProperty('$id');
+        expect(useStoreHook.$id).toBe(expectedId);
+        expect(useStoreHook).toHaveProperty('$changeSignal');
+        expect(isRef(useStoreHook.$changeSignal)).toBe(true);
 
-        it('calling the hook function should return a defined store instance', () => {
-            const instance1 = useStoreHook();
-            expect(instance1).toBeDefined();
-            // Optionally, check if calling it again returns the same instance (it should due to registry cache)
-            const instance2 = useStoreHook();
-            expect(instance2).toBe(instance1); // Check for instance stability from the hook call
-        });
+        const instance1 = useStoreHook();
+        expect(instance1).toBeDefined();
+        // Optionally, check if calling it again returns the same instance (it should due to registry cache)
+        const instance2 = useStoreHook();
+        expect(instance2).toBe(instance1); // Check for instance stability from the hook call
     };
 
     // --- Options Store Tests --- //
     describe('Options Store', () => {
-        const storeIdOpt = 'counterOpt';
-        const useCounterStoreOpt = defineZestStore(storeIdOpt, {
-            state: () => ({ count: 0, name: 'TestStore' }),
-            actions: {
-                increment() { this.count++; },
-                add(amount: number) { this.count += amount; },
-            },
+        it('should return a hook function with $id and $changeSignal properties and return a defined store instance when called', () => {
+            const storeIdOpt = 'counterOptProps'; // Use unique ID per test block if needed
+            const useCounterStoreOpt = defineZestStore(storeIdOpt, {
+                state: () => ({ count: 0 }), getters: {}, actions: {}
+            });
+            assertHookStructure(useCounterStoreOpt, storeIdOpt);
         });
 
-        // Test the hook structure itself
-        testHookStructure(useCounterStoreOpt, storeIdOpt);
-
         it('should define a store and initialize state correctly', () => {
+            const storeIdOpt = 'counterOptInit';
+            const useCounterStoreOpt = defineZestStore(storeIdOpt, {
+                state: () => ({ count: 0, name: 'TestStore' })
+            });
             const counterStore = useCounterStoreOpt();
             expect(counterStore.count).toBe(0);
             expect(counterStore.name).toBe('TestStore');
         });
 
         it('should allow actions to mutate state and trigger change signal via the hook', () => {
+            const storeIdOpt = 'counterOptAction';
+            const useCounterStoreOpt = defineZestStore(storeIdOpt, {
+                state: () => ({ count: 0 }),
+                actions: {
+                    increment() { this.count++; },
+                    add(amount: number) { this.count += amount; },
+                }
+            });
             const counterStore = useCounterStoreOpt();
-            const changeSignalRef = useCounterStoreOpt.$changeSignal; // Get signal from hook
+            const changeSignalRef = useCounterStoreOpt.$changeSignal;
             const signalCallback = vi.fn();
             const unsubscribeSignal = subscribeRef(changeSignalRef, signalCallback);
-
-            expect(counterStore.count).toBe(0);
             counterStore.increment();
             expect(counterStore.count).toBe(1);
             expect(signalCallback).toHaveBeenCalledTimes(1);
-
             counterStore.add(5);
             expect(counterStore.count).toBe(6);
             expect(signalCallback).toHaveBeenCalledTimes(2);
-
             unsubscribeSignal();
         });
 
@@ -145,11 +164,204 @@ describe('defineZestStore', () => {
             expect(signalCallback).toHaveBeenCalledTimes(1);
             unsubscribeSignal();
         });
+
+        it('should define getters and compute initial values correctly', () => {
+            const storeIdOpt = 'counterOptGetterInit'; // Unique ID
+            const useCounterStoreOpt = defineZestStore(storeIdOpt, {
+                state: () => ({ count: 0, name: 'TestStore' }),
+                getters: {
+                    doubleCount: (state) => state.count * 2,
+                    nameAndCount: (state) => `${state.name}:${state.count}`,
+                }
+            });
+            const counterStore = useCounterStoreOpt(); // Fresh instance
+            expect(counterStore).toHaveProperty('doubleCount');
+            expect(counterStore).toHaveProperty('nameAndCount');
+            expect(counterStore.doubleCount).toBe(0); // Should be 0 * 2 = 0
+            expect(counterStore.nameAndCount).toBe('TestStore:0');
+        });
+
+        it('getters should be reactive to state changes', () => {
+            const storeIdOpt = 'counterOptGetterReactive'; // Unique ID
+            const useCounterStoreOpt = defineZestStore(storeIdOpt, {
+                state: () => ({ count: 0, name: 'TestStore' }),
+                actions: {
+                    increment() { this.count++; },
+                    add(amount: number) { this.count += amount; },
+                },
+                getters: {
+                    doubleCount: (state) => state.count * 2,
+                    nameAndCount: (state) => `${state.name}:${state.count}`,
+                }
+            });
+            const counterStore = useCounterStoreOpt(); // Fresh instance
+            expect(counterStore.doubleCount).toBe(0); // Initial check (0*2=0)
+
+            counterStore.increment(); // count becomes 1
+            expect(counterStore.count).toBe(1);
+            expect(counterStore.doubleCount).toBe(2); // Should update (1*2=2)
+            expect(counterStore.nameAndCount).toBe('TestStore:1');
+
+            counterStore.add(4); // count becomes 5
+            expect(counterStore.count).toBe(5);
+            expect(counterStore.doubleCount).toBe(10); // Should update (5*2=10)
+            expect(counterStore.nameAndCount).toBe('TestStore:5');
+        });
+
+        it('getters should be cached and use computed reactivity', () => {
+            const stateGetter = vi.fn(() => ({ count: 1 }));
+            const getterFn = vi.fn((state) => state.count * 2);
+
+            const useTestGetterStore = defineZestStore('getterCacheOpt', {
+                state: stateGetter,
+                getters: { double: getterFn },
+            });
+            const store = useTestGetterStore();
+
+            // Getter fn should be called once by computed for initial value
+            expect(getterFn).toHaveBeenCalledTimes(1);
+
+            // Access the getter multiple times
+            expect(store.double).toBe(2);
+            expect(store.double).toBe(2);
+            expect(store.double).toBe(2);
+
+            // Getter fn should still only have been called once due to caching
+            expect(getterFn).toHaveBeenCalledTimes(1);
+
+            // Now, trigger a state change (though we don't have actions here, we can simulate)
+            // This requires accessing the underlying reactive state, not ideal but works for test
+            store.count = 5; // Directly modify the underlying state property
+            expect(store.count).toBe(5);
+
+            // Access the getter again, should recompute
+            expect(store.double).toBe(10);
+            expect(getterFn).toHaveBeenCalledTimes(2); // Called again
+
+            // Access again, should be cached now
+            expect(store.double).toBe(10);
+            expect(getterFn).toHaveBeenCalledTimes(2);
+        });
+
+        it('actions should have `this` correctly bound and can access getters', () => {
+            const storeId = 'thisCheckGetterOpt';
+            let thisContextInAction: any = null;
+            let doubleCountInAction: number | undefined;
+
+            const useThisCheckStore = defineZestStore(storeId, {
+                state: () => ({ a: 1 }),
+                getters: {
+                    doubleA: (state) => state.a * 2,
+                },
+                actions: {
+                    checkThis() {
+                        thisContextInAction = this;
+                        doubleCountInAction = this.doubleA; // Access getter via this
+                    },
+                },
+            });
+            const store = useThisCheckStore();
+            store.checkThis();
+
+            expect(thisContextInAction).toBe(store);
+            expect(thisContextInAction.a).toBe(1);
+            expect(thisContextInAction.doubleA).toBe(2);
+            expect(doubleCountInAction).toBe(2); // Check value accessed in action
+        });
+
+        it('getters should demonstrate fine-grained reactivity and not recompute unnecessarily', () => {
+            const state = {
+                count: 1,
+                anotherValue: 'hello',
+                nested: { deep: 100 }
+            };
+
+            // Mock getter functions to spy on their execution
+            const getter1Spy = vi.fn((s) => s.count * 2); // Depends on count
+            const getter2Spy = vi.fn((s) => s.anotherValue.toUpperCase()); // Depends on anotherValue
+            const getter3Spy = vi.fn((s) => s.nested.deep + 10); // Depends on nested.deep
+
+            const useFineGrainedStore = defineZestStore('fineGrainedGettersOpt', {
+                state: () => JSON.parse(JSON.stringify(state)), // Deep clone initial state
+                actions: {
+                    incrementCount() { this.count++; },
+                    setAnotherValue(val: string) { this.anotherValue = val; },
+                    setNestedDeep(val: number) { this.nested.deep = val; },
+                    unrelatedChange() { /* Does nothing to tracked state */ }
+                },
+                getters: {
+                    g1: getter1Spy,
+                    g2: getter2Spy,
+                    g3: getter3Spy,
+                }
+            });
+
+            const store = useFineGrainedStore();
+
+            // Initial access - all getters should compute once
+            expect(store.g1).toBe(2);   // 1*2
+            expect(store.g2).toBe('HELLO');
+            expect(store.g3).toBe(110); // 100 + 10
+            expect(getter1Spy).toHaveBeenCalledTimes(1);
+            expect(getter2Spy).toHaveBeenCalledTimes(1);
+            expect(getter3Spy).toHaveBeenCalledTimes(1);
+
+            // Access again - should use cache, no recomputation
+            expect(store.g1).toBe(2);
+            expect(store.g2).toBe('HELLO');
+            expect(store.g3).toBe(110);
+            expect(getter1Spy).toHaveBeenCalledTimes(1);
+            expect(getter2Spy).toHaveBeenCalledTimes(1);
+            expect(getter3Spy).toHaveBeenCalledTimes(1);
+
+            // --- Test fine-grained reactivity --- //
+
+            // 1. Change 'count', only getter1Spy should recompute
+            store.incrementCount(); // count becomes 2
+            expect(store.g1).toBe(4);   // New value 2*2
+            expect(store.g2).toBe('HELLO'); // Should be cached
+            expect(store.g3).toBe(110); // Should be cached
+
+            expect(getter1Spy).toHaveBeenCalledTimes(2); // Recomputed
+            expect(getter2Spy).toHaveBeenCalledTimes(1); // Still cached
+            expect(getter3Spy).toHaveBeenCalledTimes(1); // Still cached
+
+            // 2. Change 'anotherValue', only getter2Spy should recompute
+            store.setAnotherValue('world'); // anotherValue becomes 'world'
+            expect(store.g1).toBe(4);       // Should be cached
+            expect(store.g2).toBe('WORLD');  // New value
+            expect(store.g3).toBe(110);   // Should be cached
+
+            expect(getter1Spy).toHaveBeenCalledTimes(2); // Still cached from previous
+            expect(getter2Spy).toHaveBeenCalledTimes(2); // Recomputed
+            expect(getter3Spy).toHaveBeenCalledTimes(1); // Still cached
+
+            // 3. Change 'nested.deep', only getter3Spy should recompute
+            store.setNestedDeep(200); // nested.deep becomes 200
+            expect(store.g1).toBe(4);
+            expect(store.g2).toBe('WORLD');
+            expect(store.g3).toBe(210); // 200 + 10
+
+            expect(getter1Spy).toHaveBeenCalledTimes(2);
+            expect(getter2Spy).toHaveBeenCalledTimes(2);
+            expect(getter3Spy).toHaveBeenCalledTimes(2); // Recomputed
+
+            // 4. Call an action that doesn't change any tracked state - no getters should recompute
+            store.unrelatedChange();
+            expect(store.g1).toBe(4);
+            expect(store.g2).toBe('WORLD');
+            expect(store.g3).toBe(210);
+
+            expect(getter1Spy).toHaveBeenCalledTimes(2);
+            expect(getter2Spy).toHaveBeenCalledTimes(2);
+            expect(getter3Spy).toHaveBeenCalledTimes(2);
+        });
     });
 
     // --- Setup Store Tests --- //
     describe('Setup Store', () => {
         const storeIdSetup = 'counterSetup';
+        // Define the specific setup store for counter tests
         const useCounterStoreSetup = defineZestStore(storeIdSetup, () => {
             const count = ref(0);
             const name = ref('SetupStore');
@@ -159,10 +371,13 @@ describe('defineZestStore', () => {
         });
 
         // Test the hook structure itself
-        testHookStructure(useCounterStoreSetup, storeIdSetup);
+        it('should return a hook function with $id and $changeSignal properties and return a defined store instance when called', () => {
+            assertHookStructure(useCounterStoreSetup, storeIdSetup);
+        });
 
         it('should define a store using setup syntax and return refs/functions', () => {
-            const counterStore = useCounterStoreSetup();
+            // Assert type via unknown
+            const counterStore = useCounterStoreSetup() as unknown as CounterSetupStoreType;
             expect(isRef(counterStore.count)).toBe(true);
             expect(counterStore.count.value).toBe(0);
             expect(isRef(counterStore.name)).toBe(true);
@@ -172,7 +387,8 @@ describe('defineZestStore', () => {
         });
 
         it('should allow actions to mutate refs and trigger change signal via hook', () => {
-            const counterStore = useCounterStoreSetup();
+            // Assert type via unknown
+            const counterStore = useCounterStoreSetup() as unknown as CounterSetupStoreType;
             const changeSignalRef = useCounterStoreSetup.$changeSignal;
             const signalCallback = vi.fn();
             const unsubscribeSignal = subscribeRef(changeSignalRef, signalCallback);
@@ -196,20 +412,20 @@ describe('defineZestStore', () => {
             expect(useStore1).toBe(useStore2);
         });
 
-        it('should trigger change signal when ref VALUE is assigned a new object via hook', () => {
+        it('should trigger change signal when ref VALUE is assigned via hook', () => {
             const storeId = 'reactivitySetupAssign';
             const useMyStore = defineZestStore(storeId, () => {
                 const user = ref({ name: 'Alice' });
                 const setUser = (newUser: { name: string }) => { user.value = newUser; };
                 return { user, setUser };
             });
-            const store = useMyStore();
-            const changeSignalRef = useMyStore.$changeSignal; // Get from hook
+            const store = useMyStore() as unknown as MyStoreType; // Apply specific type
+            const changeSignalRef = useMyStore.$changeSignal;
             const signalCallback = vi.fn();
             const unsubscribeSignal = subscribeRef(changeSignalRef, signalCallback);
 
-            store.setUser({ name: 'Bob' });
-            expect(store.user.value.name).toBe('Bob');
+            store.setUser({ name: 'Bob' }); // No assertion needed
+            expect(store.user.value.name).toBe('Bob'); // No assertion needed
             expect(signalCallback).toHaveBeenCalledTimes(1);
             unsubscribeSignal();
         });
@@ -221,13 +437,13 @@ describe('defineZestStore', () => {
                 const setName = (newName: string) => { user.value.name = newName; };
                 return { user, setName };
             });
-            const store = useMyStore();
-            const changeSignalRef = useMyStore.$changeSignal; // Get from hook
+            const store = useMyStore() as unknown as MyStoreMutateType; // Apply specific type
+            const changeSignalRef = useMyStore.$changeSignal;
             const signalCallback = vi.fn();
             const unsubscribeSignal = subscribeRef(changeSignalRef, signalCallback);
 
-            store.setName('Bob');
-            expect(store.user.value.name).toBe('Bob');
+            store.setName('Bob'); // No assertion needed
+            expect(store.user.value.name).toBe('Bob'); // No assertion needed
             expect(signalCallback).not.toHaveBeenCalled(); // Signal should not fire
             unsubscribeSignal();
         });

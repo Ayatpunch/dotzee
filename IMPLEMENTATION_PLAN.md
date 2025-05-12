@@ -96,7 +96,7 @@ This structure is a guideline and may be refined as development progresses and n
         - [x] `id`: Unique string identifier.
         - [x] `options.state`: Function returning the initial state object (wrapped with `reactive`).
         - [x] `options.actions`: Synchronous methods (using `this` bound to the store instance). Mutations trigger reactivity *and* the change signal.
-        - [ ] (Deferred) `options.getters`: Derived state (will use `computed` internally).
+        - [x] `options.getters`: Derived state (uses `computed` internally, implemented and tested).
       - [x] **Setup Store (`setupFunction`):**
         - [x] `id`: Unique string identifier.
         - [x] Call the setup function.
@@ -111,18 +111,21 @@ This structure is a guideline and may be refined as development progresses and n
     - [x] Modify `defineZestStore` to return an augmented hook function (`ZestStoreHook`) containing `$id` and `$changeSignal` properties needed by `useZestStore`.
     - [x] Hook retrieves the store instance and subscribes to changes using `useSyncExternalStore` (built-in for React 18+).
         - [x] `subscribe` function links to the specific store instance's **central change signal** (obtained via `storeHook.$changeSignal`).
-        - [x] `getSnapshot` function returns the current store instance (sufficient for now).
-    - [x] Basic tests for component re-rendering on state change (triggered via Options Store actions or Setup Store `ref` changes).
+        - [x] `getSnapshot` function returns the `changeSignal.value` to ensure React re-renders.
+    - [x] Basic tests for component re-rendering on state change (verified via example app functionality).
 
 5.  **Initial TypeScript Typing:**
 
     - [x] Basic generic types for `defineZestStore` to infer state type.
     - [x] Basic types for actions.
     - [x] Type the return value of the `useStore` hook.
+    - [x] Refined type handling in `defineZestStore` to ensure correct type inference for Setup Store return types.
 
-6.  **Simple Example Application:** (Setup Complete, Functionality Pending `useZestStore`)
+6.  **Simple Example Application:** (Setup Complete, Functionality Implemented & Tested)
     - [x] Create a very basic React app (e.g., using Vite or Create React App) to test the library.
     - [x] Implement a counter store and component.
+    - [x] Resolved hook errors and UI reactivity issues.
+    - [x] Significantly improved UI/UX.
 
 ## Phase 2: Getters, Async Actions & Improved Typing
 
@@ -134,15 +137,13 @@ This structure is a guideline and may be refined as development progresses and n
 
 1.  **Getters (Computed Properties):**
 
-    - [ ] Add `options.getters` to `defineZestStore`.
-    - [ ] Getters should be functions that take `state` as an argument.
-    - [ ] Integrate getters into the store instance, making them accessible (e.g., `store.myGetter`).
-    - [ ] Ensure getters are reactive:
-      - [ ] Track dependencies (state properties accessed within the getter).
-        - This will implement more fine-grained reactivity, where getters only re-evaluate if their specific property dependencies change.
-        - This also simplifies reacting to changes in nested state for derived values, as the getter\'s dependencies (e.g., `state.user.name`) are tracked automatically.
-      - [ ] Re-evaluate getters when their dependencies change.
-    - [ ] Unit tests for getters (calculation, reactivity).
+    - [x] Add `options.getters` to `defineZestStore`.
+    - [x] Getters should be functions that take `state` as an argument.
+    - [x] Integrate getters into the store instance, making them accessible (e.g., `store.myGetter`).
+    - [x] Ensure getters are reactive:
+      - [x] Track dependencies (state properties accessed within the getter) using `computed`.
+      - [x] Re-evaluate getters when their dependencies change (verified via tests).
+    - [x] Unit tests for getters (calculation, reactivity, caching, fine-grained reactivity).
 
 2.  **Asynchronous Actions:**
 

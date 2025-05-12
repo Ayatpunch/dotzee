@@ -1,4 +1,5 @@
 import { isRef, Ref } from './ref'; // Import ref utilities
+import { track, trigger } from './computed'; // Import central track/trigger
 
 /**
  * A WeakMap to store original objects that have already been made reactive.
@@ -14,7 +15,7 @@ const reactiveProxyMap = new WeakMap<object, any>();
 const proxyToOriginalMap = new WeakMap<any, object>();
 
 /**
- * A WeakMap to store subscribers for each reactive object.
+ * A WeakMap to store subscribers for each reactive object (for coarse-grained subscription).
  * Keys are original objects, values are a Set of callback functions (subscribers).
  */
 const subscribersMap = new WeakMap<object, Set<() => void>>();
@@ -29,13 +30,13 @@ function isObject(val: unknown): val is Record<any, any> {
 }
 
 /**
- * Triggers all subscriber callbacks associated with a given target object.
+ * Triggers all subscriber callbacks associated with a given target object (coarse-grained).
  * Also triggers an optional store-level change callback if provided.
  *
  * @param target - The original object whose subscribers should be notified.
  * @param triggerStoreChange - Optional callback to signal a higher-level change (e.g., for store updates).
  */
-function triggerEffects(target: object, triggerStoreChange?: () => void): void {
+function triggerStoreSubscribers(target: object, triggerStoreChange?: () => void): void {
     const subscribers = subscribersMap.get(target);
     if (subscribers) {
         // console.log(`Triggering ${subscribers.size} effects for target:`, target);
@@ -66,7 +67,9 @@ export function reactive<T extends object>(target: T, triggerStoreChange?: () =>
     const proxy = new Proxy(target, {
         get(targetObj, key, receiver) {
             const value = Reflect.get(targetObj, key, receiver);
-            // console.log(`GET: key "${String(key)}" on target:`, targetObj, '=> value', value);
+            // Track dependency on this property for fine-grained reactivity (e.g., computed)
+            track(targetObj, key);
+            // console.log(`GET reactive: key "${String(key)}"`);
 
             if (isObject(value)) {
                 return reactive(value, triggerStoreChange);
@@ -79,8 +82,12 @@ export function reactive<T extends object>(target: T, triggerStoreChange?: () =>
             const result = Reflect.set(targetObj, key, newValue, receiver);
 
             if (oldValue !== newValue) {
-                // console.log(`SET: key "${String(key)}" on target:`, targetObj, 'from', oldValue, 'to', newValue);
-                triggerEffects(targetObj, triggerStoreChange);
+                // console.log(`SET reactive: key "${String(key)}"`);
+                // Trigger fine-grained effects depending on this specific property
+                trigger(targetObj, key);
+
+                // Trigger coarse-grained store subscribers (e.g., for useSyncExternalStore)
+                triggerStoreSubscribers(targetObj, triggerStoreChange);
             }
             return result;
         },
@@ -92,8 +99,10 @@ export function reactive<T extends object>(target: T, triggerStoreChange?: () =>
 }
 
 /**
- * Subscribes a callback function to changes in a reactive object or its proxy.
+ * Subscribes a callback function to coarse-grained changes in a reactive object or its proxy.
+ * This is primarily used internally for the store's overall change signal.
  *
+ * @internal
  * @template T Extends object
  * @param {T} targetOrProxy - The object or its proxy to subscribe to.
  * @param {() => void} callback - The function to call when the object changes.
