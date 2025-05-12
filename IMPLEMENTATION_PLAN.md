@@ -107,22 +107,22 @@ This structure is a guideline and may be refined as development progresses and n
 
 4.  **React Integration (`src/react/`):**
 
-    - [ ] Create the main hook (e.g., `useZestStore(storeDefinition)`) returned by `defineZestStore`.
-    - [ ] Hook retrieves or creates the store instance (Options or Setup type).
-    - [ ] Implements `useSyncExternalStore` (targeting React 18+):
-        - [ ] `subscribe` function links to the specific store instance's **central change signal**.
-        - [ ] `getSnapshot` function returns the current state/exposed values of the store instance.
-    - [ ] Basic tests for component re-rendering on state change (triggered via Options Store actions or Setup Store `ref` changes).
+    - [x] Create the main hook (`useZestStore(storeHook)`) in `src/react/useZestStore.ts`.
+    - [x] Modify `defineZestStore` to return an augmented hook function (`ZestStoreHook`) containing `$id` and `$changeSignal` properties needed by `useZestStore`.
+    - [x] Hook retrieves the store instance and subscribes to changes using `useSyncExternalStore` (built-in for React 18+).
+        - [x] `subscribe` function links to the specific store instance's **central change signal** (obtained via `storeHook.$changeSignal`).
+        - [x] `getSnapshot` function returns the current store instance (sufficient for now).
+    - [x] Basic tests for component re-rendering on state change (triggered via Options Store actions or Setup Store `ref` changes).
 
 5.  **Initial TypeScript Typing:**
 
-    - [ ] Basic generic types for `defineZestStore` to infer state type.
-    - [ ] Basic types for actions.
-    - [ ] Type the return value of the `useStore` hook.
+    - [x] Basic generic types for `defineZestStore` to infer state type.
+    - [x] Basic types for actions.
+    - [x] Type the return value of the `useStore` hook.
 
-6.  **Simple Example Application:**
-    - [ ] Create a very basic React app (e.g., using Vite or Create React App) to test the library.
-    - [ ] Implement a counter store and component.
+6.  **Simple Example Application:** (Setup Complete, Functionality Pending `useZestStore`)
+    - [x] Create a very basic React app (e.g., using Vite or Create React App) to test the library.
+    - [x] Implement a counter store and component.
 
 ## Phase 2: Getters, Async Actions & Improved Typing
 

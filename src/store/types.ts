@@ -59,15 +59,24 @@ export type StoreInstanceType<S extends object = any, A extends StoreActions<S> 
 
 /**
  * Internal representation of a store held in the registry.
- * Includes the user-facing instance and the internal change signal mechanism.
  */
-export interface StoreRegistryEntry<InstanceType extends StoreInstanceType = any> {
-    instance: InstanceType;
-    changeSignal: Ref<number>; // The internal signal for useSyncExternalStore
+export interface StoreRegistryEntry<T extends StoreInstanceType = any> {
+    // Store the hook function itself, which contains the instance getter,
+    // the $id, and the $changeSignal.
+    hook: ZestStoreHook<T>;
+    // We can potentially remove instance, changeSignal, and id from here
+    // if the hook contains everything, but let's keep them for now for potential internal use.
+    instance: T;
+    changeSignal: Ref<number>;
+    id: string;
 }
 
 /**
  * Represents the hook function returned by defineZestStore,
  * providing access to the specific store instance type (Options or Setup).
  */
-export type ZestStoreHook<InstanceType extends StoreInstanceType = any> = () => InstanceType; 
+export interface ZestStoreHook<T extends StoreInstanceType> {
+    (): T; // The function signature to get the instance
+    $id: string; // The unique ID of the store
+    $changeSignal: Ref<number>; // The ref used for reactivity signaling
+} 

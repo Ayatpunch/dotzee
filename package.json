@@ -6,9 +6,10 @@
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "npm run build:esm && npm run build:cjs",
-    "build:esm": "esbuild src/index.ts --bundle --outfile=dist/index.esm.js --platform=neutral --format=esm --target=es2020 --sourcemap",
-    "build:cjs": "esbuild src/index.ts --bundle --outfile=dist/index.js --platform=neutral --format=cjs --target=es2020 --sourcemap",
+    "build": "npm run build:types && npm run build:esm && npm run build:cjs",
+    "build:esm": "esbuild src/index.ts --bundle --outfile=dist/index.esm.js --platform=neutral --format=esm --target=es2020 --sourcemap --external:react --external:react-dom",
+    "build:cjs": "esbuild src/index.ts --bundle --outfile=dist/index.js --platform=neutral --format=cjs --target=es2020 --sourcemap --external:react --external:react-dom",
+    "build:types": "tsc --project tsconfig.build.json --emitDeclarationOnly --outDir dist",
     "test": "vitest run",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",

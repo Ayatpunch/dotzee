@@ -40,3 +40,22 @@
     - Refactored `defineZestStore` to ensure the store instance itself is the reactive object and actions are correctly bound to this instance.
     - Updated `src/reactivity/reactive.ts` to correctly handle subscriptions to proxies of nested objects by resolving them to their original targets.
     - All unit tests for `defineZestStore` are now passing, confirming correct state initialization, action behavior, reactivity, and singleton pattern.
+
+- **Task 4: React Integration (`src/react/`)**
+  - Discussed the main hook (`useZestStore(storeHook)`). Although the actual file `src/react/useZestStore.ts` isn't created yet, its conceptual requirements were addressed.
+  - Modified `defineZestStore` in `src/store/defineZestStore.ts` to return an augmented hook function (`ZestStoreHook`).
+  - This hook includes `$id` (string) and `$changeSignal` (a `Ref<number>`) properties.
+  - The design anticipates that `useZestStore` (when implemented) will use React 18's `useSyncExternalStore`.
+    - The `subscribe` function for `useSyncExternalStore` will leverage `storeHook.$changeSignal` to listen for store updates.
+    - The `getSnapshot` function will return the store instance obtained by calling `storeHook()`.
+  - Unit tests for `defineZestStore` were updated to verify the structure and content of the returned `ZestStoreHook`, including the presence and type of `$id` and `$changeSignal`.
+
+- **Task 5: Initial TypeScript Typing**
+  - Reviewed the existing TypeScript implementation in `src/store/types.ts` and `src/store/defineZestStore.ts`.
+  - Confirmed that basic generic types for `defineZestStore` are in place:
+    - For Options Stores: `defineZestStore<Id extends string, S extends object, A extends StoreActions<S>>(id, options)` infers state type `S` and action types `A`.
+    - For Setup Stores: `defineZestStore<Id extends string, R extends SetupStoreReturnType>(id, setup)` infers the return type `R`.
+  - `StoreActions<S>` provides basic typing for actions within Options Stores.
+  - The `ZestStoreHook<T>` type correctly types the augmented hook function, ensuring the store instance returned by `useStore()` (e.g., `const store = useCounterStore()`) is properly typed.
+  - Current unit tests in `defineZestStore.test.ts` implicitly validate these initial typings, as they pass TypeScript checks.
+  - Marked Task 5 as complete in `IMPLEMENTATION_PLAN.md`.
