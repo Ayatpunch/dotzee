@@ -59,11 +59,11 @@ src/
 
 This structure is a guideline and may be refined as development progresses and new requirements emerge.
 
-## Phase 1: Core Reactivity & Basic `defineZestStore` (MVP)
+## Phase 1: Core Reactivity, Dual Store Definitions & React Integration (MVP+)
 
-**Goal:** Establish the fundamental reactive engine and the initial `defineZestStore` API for basic state and synchronous actions.
+**Goal:** Establish the fundamental reactive engine (including `ref` and `computed` primitives), the initial `defineZestStore` API supporting both **Options** and **Setup** syntaxes, and the core React hook integration.
 
-**Estimated Time:** 1.5 - 3 months
+**Estimated Time:** 2.5 - 4.5 months (Increased due to Setup Store support)
 
 ### Tasks:
 
@@ -76,44 +76,43 @@ This structure is a guideline and may be refined as development progresses and n
     - [x] Set up linting (ESLint) and formatting (Prettier).
     - [x] Initialize a Git repository.
 
-2.  **Reactive Core (`@reactivity/core` or similar module):**
+2.  **Reactive Core Enhancements (`src/reactivity/`):**
 
-    - [x] Implement Proxy-based reactivity for plain objects.
-      - [x] Focus on plain objects and arrays for MVP; full reactivity for collections like `Map`, `Set` deferred (see Phase 5).
-      - [x] Trap `get` operations for dependency tracking (initially conceptual, for getters).
-        - Note: Initial `subscribe` mechanism is per-object. Full dependency tracking for getters is planned for Phase 2.
-      - [x] Trap `set` operations to trigger notifications.
-      - [x] Handle nested objects/arrays.
-        - Note: Current reactivity requires subscribing to the specific nested object reference for changes within it. Phase 2 Getters will simplify this for derived state.
-        - Note: Basic array reactivity (index assignment, length property) is included in MVP. Comprehensive handling of array mutation methods (e.g., `push`, `pop`, `splice`, `sort`) to ensure consistent reactivity will be fully addressed in Phase 5.
-    - [x] Implement a subscription mechanism:
-      - [x] `subscribe(callback)` function.
-      - [x] Notify subscribers on state mutations.
-    - [x] Basic unit tests for reactivity (object mutation, notification).
+    - [x] Implement Proxy-based reactivity for plain objects (`reactive`).
+    - [x] Implement `ref(initialValue)` for standalone reactive values, instrumented to trigger store updates.
+    - [ ] Implement basic `computed(getterFunction)` for derived values (re-calculates on access initially), instrumented to integrate with store updates.
+    - [x] Implement store-level change signaling mechanism (e.g., an internal `ref` or counter) triggered by mutations in reactive objects or `ref` updates.
+    - [x] Trap `get` operations for dependency tracking (initially conceptual, for getters/computeds).
+    - [x] Trap `set` operations to trigger notifications *and* the store-level change signal.
+    - [x] Handle nested objects/arrays within `reactive`.
+    - [x] Implement a subscription mechanism (`subscribe`) for direct reactivity (used internally and potentially by plugins).
+    - [x] Unit tests for `ref`, `computed` (only ref tested), and change signal integration (tested via reactive/store tests).
 
-3.  **Store Implementation (`@store/core` or similar module):**
+3.  **Store Implementation (`src/store/`):**
 
-    - [x] Design the internal structure for a single store.
-    - [x] Implement `defineZestStore(id, options)` function:
-      - [x] `id`: Unique string identifier for the store.
-      - [x] `options.state`: A function returning the initial state object.
-      - [x] Create a reactive proxy for the state.
-    - [x] Implement `options.actions`:
-      - [x] Allow defining synchronous methods.
-      - [x] Bind actions to the store instance so `this` refers to the state proxy.
-      - [x] Mutations within actions should trigger the reactive core.
-    - [x] Store registry:
-      - [x] Internal mechanism to store and retrieve store instances by ID.
-      - [x] Ensure singleton pattern for stores (per ID).
+    - [x] Design the internal structure for a single store instance, incorporating the change signal.
+    - [x] Adapt `defineZestStore(id, options | setupFunction)` to handle both definition styles:
+      - [x] **Options Store (`options` object):**
+        - [x] `id`: Unique string identifier.
+        - [x] `options.state`: Function returning the initial state object (wrapped with `reactive`).
+        - [x] `options.actions`: Synchronous methods (using `this` bound to the store instance). Mutations trigger reactivity *and* the change signal.
+        - [ ] (Deferred) `options.getters`: Derived state (will use `computed` internally).
+      - [x] **Setup Store (`setupFunction`):**
+        - [x] `id`: Unique string identifier.
+        - [x] Call the setup function.
+        - [x] User utilizes `ref`, `computed` (only ref tested), and regular functions within the setup function.
+        - [x] The returned object properties (refs, computeds, functions) form the store's public interface.
+        - [x] Ensure `ref` and `computed` usage within setup triggers the store's change signal correctly (verified for `ref`).
+    - [x] Store registry: Internal mechanism for singleton instances per ID.
 
-4.  **React Integration (`@react-hooks` or similar module):**
+4.  **React Integration (`src/react/`):**
 
-    - [ ] Create the main hook (e.g., `useStore(storeDefinition)` or `use[StoreName]()` derived from `defineZestStore`):
-      - [ ] Retrieves or creates the store instance.
-      - [ ] Implements `useSyncExternalStore` to subscribe to store changes.
-        - [ ] `subscribe` function (passed to `useSyncExternalStore`) links to the store\'s subscription.
-        - [ ] `getSnapshot` function (passed to `useSyncExternalStore`) returns the current state (or a relevant part).
-    - [ ] Basic tests for component re-rendering on state change.
+    - [ ] Create the main hook (e.g., `useZestStore(storeDefinition)`) returned by `defineZestStore`.
+    - [ ] Hook retrieves or creates the store instance (Options or Setup type).
+    - [ ] Implements `useSyncExternalStore` (targeting React 18+):
+        - [ ] `subscribe` function links to the specific store instance's **central change signal**.
+        - [ ] `getSnapshot` function returns the current state/exposed values of the store instance.
+    - [ ] Basic tests for component re-rendering on state change (triggered via Options Store actions or Setup Store `ref` changes).
 
 5.  **Initial TypeScript Typing:**
 

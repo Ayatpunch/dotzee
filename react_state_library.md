@@ -24,32 +24,69 @@ Alternatively, we'll consider a **Signal-based** fallback or future mode. Signal
 
 ## Store API and Structure
 
-### Composition-Friendly Stores
+### Composition-Friendly Stores with Dual Syntax
 
-We will provide a **`defineZestStore`**-style API (similar to Pinia's `defineStore`) for creating stores. For example:
+We will provide a **`defineZestStore`** API (similar to Pinia's `defineStore`) for creating stores, supporting **two distinct syntaxes** for flexibility:
 
-```ts
-export const useCounterStore = defineZestStore('counter', {
-  state: () => ({ count: 0 }),
-  actions: {
-    increment() {
-      this.count++;
-    },
-    async fetchCount() {
-      /* ... */
-    },
-  },
-  getters: {
-    doubleCount: (state) => state.count * 2,
-  },
-});
-```
+1.  **Options Store (Object-based):**
+    Similar to Vue's Options API, users provide an object with `state`, `actions`, and `getters` properties.
 
-Each store is a **singleton instance** (unless re-created for SSR) keyed by name/ID. Components call `useCounterStore()` (a hook) to get access to that store's state and actions. Because our API is hook-based, it fits naturally into React's composition model. This lets stores be used anywhere (not just under a Provider) and eliminates the rigid modules of old-style Redux/Vuex. Pinia's docs emphasize that stores "are as familiar as components" and let you "forget you are even using a store", a philosophy we adopt.
+    ```ts
+    // Example Options Store
+    export const useCounterStore = defineZestStore('counter', {
+      state: () => ({ count: 0 }),
+      actions: {
+        increment() {
+          this.count++; // 'this' refers to the store instance
+        },
+      },
+      getters: {
+        // Getters will be implemented later, likely using 'computed' internally
+        doubleCount: (state) => state.count * 2,
+      },
+    });
+    ```
+
+    *   `state`: A function returning the initial state object (becomes reactive).
+    *   `actions`: Methods where `this` is bound to the store instance (state + actions + getters).
+    *   `getters`: Computed properties derived from state.
+
+2.  **Setup Store (Function-based):**
+    Similar to Vue's Composition API setup function, users provide a function where they define reactive state (`ref`), computed values (`computed`), and methods. The function returns an object containing the properties and methods to expose.
+
+    ```ts
+    import { ref, computed } from 'zest'; // Assuming these are exported from our library
+
+    // Example Setup Store
+    export const useCounterStore = defineZestStore('counterSetup', () => {
+      // Reactive state
+      const count = ref(0);
+
+      // Computed value (derived state)
+      const doubleCount = computed(() => count.value * 2);
+
+      // Action/Method
+      function increment() {
+        count.value++;
+      }
+
+      // Expose public API
+      return { count, doubleCount, increment };
+    });
+    ```
+
+    *   Requires importing and using `ref` and `computed` from our library.
+    *   `ref()` creates standalone reactive state properties.
+    *   `computed()` creates derived reactive getters.
+    *   `function()` defines actions/methods.
+    *   Only the returned properties are exposed by the store.
+    *   Avoids the use of `this` for state manipulation.
+
+Each store, regardless of definition style, is a **singleton instance** (unless re-created for SSR) keyed by its unique ID. Components call the returned hook (e.g., `useCounterStore()`) to access that store's state and actions.
 
 ### Store Lifecycle & Modularization
 
-- **Registration and Lazy Loading:** Stores will register on first use. We can support dynamic import of store modules so that in a large app, code splitting on routes can also split state stores. For example, if a store file is only used in an admin panel, it can be asynchronously loaded when that panel mounts. This mirrors Pinia's "modular by design" idea: _"Build multiple stores and let your bundler code split them automatically."_.
+- **Registration and Lazy Loading:** Stores will register on first use. Supports dynamic import for code splitting.
 
 - **Namespacing/IDs:** Each store has a unique name. Internally we keep a registry mapping names to store instances. If a store is defined in code-splitted chunks, the first call to `useStore()` for that name will load/create it.
 
@@ -61,92 +98,67 @@ Each store is a **singleton instance** (unless re-created for SSR) keyed by name
 
 ### Store Example
 
-A very basic usage might look like:
+Using the Options Store example:
 
 ```jsx
-// counterStore.ts
-export const useCounterStore = defineZestStore('counter', {
-  state: () => ({ count: 0 }),
-  actions: {
-    increment() {
-      this.count++;
-    },
-  },
-  getters: {
-    doubleCount: (state) => state.count * 2,
-  },
-});
+// counterStore.ts - Defined using Options Store syntax
+export const useCounterStore = defineZestStore('counter', { /* ... as above ... */ });
 
 // CounterComponent.tsx
+import { useCounterStore } from './counterStore';
+
 function Counter() {
   const counter = useCounterStore(); // hooks into the reactive store
   return (
     <div>
       <div>Count: {counter.count}</div>
-      <div>Double: {counter.doubleCount}</div>
+      {/* <div>Double: {counter.doubleCount}</div> */}
+      {/* Getters TBD */}
       <button onClick={() => counter.increment()}>Increment</button>
     </div>
   );
 }
 ```
 
-Here, reading `counter.count` and `counter.doubleCount` automatically tracks dependencies. When `increment()` mutates `count`, React re-renders this component because our `useSyncExternalStore` hook will emit a change. This API style closely mimics Pinia/Vue's Composition stores, but in React/TS form.
+Using the Setup Store example:
+
+```jsx
+// counterSetupStore.ts - Defined using Setup Store syntax
+import { ref, computed } from 'zest';
+export const useCounterSetupStore = defineZestStore('counterSetup', () => { /* ... as above ... */ });
+
+// CounterSetupComponent.tsx
+import { useCounterSetupStore } from './counterSetupStore';
+
+function CounterSetup() {
+  const counter = useCounterSetupStore();
+  return (
+    <div>
+      {/* Access ref state via .value */}
+      <div>Count: {counter.count.value}</div>
+      {/* Access computed via .value */}
+      <div>Double: {counter.doubleCount.value}</div>
+      <button onClick={counter.increment}>Increment</button>
+    </div>
+  );
+}
+```
+
+In both cases, reading reactive state (`counter.count` or `counter.count.value`) and derived state (`counter.doubleCount.value`) tracks dependencies. Mutations trigger updates via the `useSyncExternalStore` hook.
 
 ## Actions and Derived (Computed) State
 
 ### Actions
 
-Stores will support **actions** (methods) that modify state, possibly asynchronously. In Pinia, actions are ordinary async functions that `this`-mutate the state. We'll do likewise: an `actions` object in `defineZestStore` whose functions have the store's state (`this`) bound. Calling `store.someAction()` can perform multiple state mutations or async side-effects. We encourage actions to be the main way to change state (rather than directly mutating state from components), since actions can have meaningful names and be tracked by devtools.
-
-Under the hood, calling an action is just calling a function that mutates the Proxy state. We will still treat these as normal JS methods. Optionally, we may create a commit/dispatch interface (like Redux), but a direct-call action is simpler and more natural here. After an action runs, subscribers (our hook) will get notified of the state change.
+- **Options Stores:** Actions are methods defined in the `actions` object. They operate on the store instance via `this`.
+- **Setup Stores:** Actions are regular functions defined within the setup function. They typically operate on `ref` variables directly (e.g., `count.value++`).
 
 ### Derived State (Getters/Computed)
 
-For **computed or derived state**, we will let stores define **getters** (akin to Pinia) or simply encourage use of JavaScript getters on the state object. Vue-style "getters" can be written as methods or pure functions that derive from `state`. For example, `doubleCount: (state) => state.count * 2`.
+- **Options Stores:** Defined in the `getters` object. These will likely use the `computed` primitive internally for reactivity and caching (eventually).
+- **Setup Stores:** Defined using the `computed()` function imported from the library, wrapping a getter function.
 
-If using the Proxy approach, one way is to define actual JS getters on the store object. Valtio demonstrates that object getters work as computed properties: e.g.,
-
-```js
-const state = proxy({
-  count: 1,
-  get double() {
-    return this.count * 2;
-  },
-});
-```
-
-Here, `state.double` automatically calculates from `state.count`. This recomputes on each access (unless cached). In our design, we could either use such getters or maintain a cache. Alternatively, we can wrap getters in `computed` or a similar utility (like Valtio's `derive` or MobX's `computed`).
-
-Key is that derived values should update when their dependencies change. Since we use Proxies, whenever any reactive state inside a getter is accessed, the dependency can be tracked. For simplicity, we may recalc getters on each read (as Valtio notes, non-cached getters recalc every call). For memoization, we could add an optional `proxy-memoize` utility or a `computed` function, but that is advanced. Initially, reactive getters (recomputed on demand) suffice.
-
-### Example Getters/Actions
-
-```ts
-export const useCartStore = defineZestStore('cart', {
-  state: () => ({ items: [] as Item[] }),
-  actions: {
-    add(item: Item) {
-      this.items.push(item);
-    },
-    remove(id: string) {
-      this.items = this.items.filter((i) => i.id !== id);
-    },
-  },
-  getters: {
-    totalPrice: (state) => state.items.reduce((s, i) => s + i.price, 0),
-  },
-});
-```
-
-In a component:
-
-```jsx
-const cart = useCartStore();
-<div>Total: {cart.totalPrice}</div>
-<button onClick={() => cart.add({id: 'x', price: 10})}>Add</button>
-```
-
-Here `cart.totalPrice` will update when `items` changes.
+Both approaches rely on the underlying reactivity system to ensure derived values update when their dependencies change.
 
 ## Type Safety and Developer Ergonomics
 

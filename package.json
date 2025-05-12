@@ -34,7 +34,13 @@
     "@typescript-eslint/parser": "^6.10.0",
     "@typescript-eslint/eslint-plugin": "^6.10.0",
     "eslint-config-prettier": "^9.0.0",
-    "eslint-plugin-prettier": "^5.0.0"
+    "eslint-plugin-prettier": "^5.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "@testing-library/react": "^14.0.0"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0"
   },
   "files": [
     "dist"

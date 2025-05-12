@@ -161,5 +161,56 @@ describe('reactive', () => {
         });
     });
 
+    // --- Tests for triggerStoreChange --- //
+    describe('triggerStoreChange integration', () => {
+        it('should call triggerStoreChange when a property changes', () => {
+            const triggerFn = vi.fn();
+            const original = { count: 0 };
+            const observed = reactive(original, triggerFn);
+
+            observed.count = 1;
+            expect(triggerFn).toHaveBeenCalledTimes(1);
+
+            observed.count = 2;
+            expect(triggerFn).toHaveBeenCalledTimes(2);
+        });
+
+        it('should not call triggerStoreChange if property value does not change', () => {
+            const triggerFn = vi.fn();
+            const original = { count: 0 };
+            const observed = reactive(original, triggerFn);
+
+            observed.count = 0; // Set to the same value
+            expect(triggerFn).not.toHaveBeenCalled();
+        });
+
+        it('should call triggerStoreChange for changes in nested reactive objects', () => {
+            const triggerFn = vi.fn();
+            const original = { nested: { value: 10 } };
+            const observed = reactive(original, triggerFn);
+
+            observed.nested.value = 20;
+            expect(triggerFn).toHaveBeenCalledTimes(1);
+        });
+
+        it('should call triggerStoreChange only once for a single top-level change', () => {
+            const triggerFn = vi.fn();
+            const original = { count: 0, name: 'test' };
+            const observed = reactive(original, triggerFn);
+
+            observed.count = 1;
+            expect(triggerFn).toHaveBeenCalledTimes(1);
+        });
+
+        it('should call triggerStoreChange only once for a single nested change', () => {
+            const triggerFn = vi.fn();
+            const original = { nested: { value: 10, other: 5 }, level: 1 };
+            const observed = reactive(original, triggerFn);
+
+            observed.nested.value = 20;
+            expect(triggerFn).toHaveBeenCalledTimes(1);
+        });
+    });
+
     // TODO: Add tests for subscriptions once implemented
 }); 

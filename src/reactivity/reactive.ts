@@ -1,3 +1,5 @@
+import { isRef, Ref } from './ref'; // Import ref utilities
+
 /**
  * A WeakMap to store original objects that have already been made reactive.
  * Keys are original objects, values are their reactive proxies.
@@ -28,13 +30,21 @@ function isObject(val: unknown): val is Record<any, any> {
 
 /**
  * Triggers all subscriber callbacks associated with a given target object.
+ * Also triggers an optional store-level change callback if provided.
+ *
  * @param target - The original object whose subscribers should be notified.
+ * @param triggerStoreChange - Optional callback to signal a higher-level change (e.g., for store updates).
  */
-function triggerEffects(target: object): void {
+function triggerEffects(target: object, triggerStoreChange?: () => void): void {
     const subscribers = subscribersMap.get(target);
     if (subscribers) {
         // console.log(`Triggering ${subscribers.size} effects for target:`, target);
-        subscribers.forEach(callback => callback());
+        new Set(subscribers).forEach(callback => callback());
+    }
+    // Also trigger the store-level change if provided
+    if (triggerStoreChange) {
+        // console.log('Triggering store change from reactive set');
+        triggerStoreChange();
     }
 }
 
@@ -45,9 +55,10 @@ function triggerEffects(target: object): void {
  *
  * @template T Extends object
  * @param {T} target - The object to make reactive.
+ * @param {() => void} [triggerStoreChange] - Optional callback to notify on any change.
  * @returns {T} A reactive proxy of the target object.
  */
-export function reactive<T extends object>(target: T): T {
+export function reactive<T extends object>(target: T, triggerStoreChange?: () => void): T {
     if (reactiveProxyMap.has(target)) {
         return reactiveProxyMap.get(target);
     }
@@ -58,7 +69,7 @@ export function reactive<T extends object>(target: T): T {
             // console.log(`GET: key "${String(key)}" on target:`, targetObj, '=> value', value);
 
             if (isObject(value)) {
-                return reactive(value); // Recursive call for nested objects
+                return reactive(value, triggerStoreChange);
             }
             return value;
         },
@@ -69,7 +80,7 @@ export function reactive<T extends object>(target: T): T {
 
             if (oldValue !== newValue) {
                 // console.log(`SET: key "${String(key)}" on target:`, targetObj, 'from', oldValue, 'to', newValue);
-                triggerEffects(targetObj); // Trigger effects when a property changes
+                triggerEffects(targetObj, triggerStoreChange);
             }
             return result;
         },
