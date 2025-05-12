@@ -5,6 +5,9 @@ import { reactive, subscribe } from '../reactivity/reactive';
 import { computed, isComputed, ComputedRef } from '../reactivity/computed'; // Make sure ComputedRef is imported if needed
 import type { StoreInstance, StoreRegistryEntry, ZestStoreHook, StoreInstanceType } from './types';
 
+// Helper function for async delays in tests
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 // Helper types for Setup Store tests
 interface CounterSetupStoreType {
     count: Ref<number>;
@@ -459,6 +462,126 @@ describe('defineZestStore', () => {
             expect(useSetupSecond).toBe(useOptionsFirst); // Should return the exact same function object
             const instance = useSetupSecond();
             expect(instance.type).toBe('options');
+        });
+    });
+
+    // --- Asynchronous Actions Tests --- //
+    describe('Asynchronous Actions', () => {
+        // Options Store Async Action Test
+        it('Options Store: should handle async actions, update state, and trigger signal after await', async () => {
+            const storeId = 'asyncOptions';
+            const useAsyncStore = defineZestStore(storeId, {
+                state: () => ({ status: 'idle', data: null as string | null }),
+                actions: {
+                    async fetchData(simulatedData: string) {
+                        this.status = 'loading';
+                        await delay(10); // Simulate network delay
+                        this.data = simulatedData;
+                        this.status = 'success';
+                    },
+                },
+            });
+
+            const store = useAsyncStore();
+            const changeSignalRef = useAsyncStore.$changeSignal;
+            const signalCallback = vi.fn();
+            const unsubscribe = subscribeRef(changeSignalRef, signalCallback);
+
+            expect(store.status).toBe('idle');
+            expect(store.data).toBeNull();
+            expect(signalCallback).not.toHaveBeenCalled();
+
+            const fetchDataPromise = store.fetchData('Fetched Data!');
+
+            // Status should change immediately
+            expect(store.status).toBe('loading');
+            expect(signalCallback).toHaveBeenCalledTimes(1); // Triggered by status change
+
+            // Wait for the async action to complete
+            await fetchDataPromise;
+
+            // Check final state and signal calls
+            expect(store.status).toBe('success');
+            expect(store.data).toBe('Fetched Data!');
+            // Two more calls expected: one for data, one for status
+            expect(signalCallback).toHaveBeenCalledTimes(3);
+
+            unsubscribe();
+        });
+
+        // Setup Store Async Action Test
+        it('Setup Store: should handle async actions, update refs, and trigger signal after await', async () => {
+            const storeId = 'asyncSetup';
+            const useAsyncStore = defineZestStore(storeId, () => {
+                const status = ref<'idle' | 'loading' | 'success'>('idle');
+                const data = ref<string | null>(null);
+
+                async function fetchData(simulatedData: string) {
+                    status.value = 'loading';
+                    await delay(10); // Simulate network delay
+                    data.value = simulatedData;
+                    status.value = 'success';
+                }
+                return { status, data, fetchData };
+            });
+
+            const store = useAsyncStore();
+            const changeSignalRef = useAsyncStore.$changeSignal;
+            const signalCallback = vi.fn();
+            const unsubscribe = subscribeRef(changeSignalRef, signalCallback);
+
+            expect(store.status.value).toBe('idle');
+            expect(store.data.value).toBeNull();
+            expect(signalCallback).not.toHaveBeenCalled();
+
+            const fetchDataPromise = store.fetchData('Fetched Setup Data!');
+
+            // Status ref should change immediately
+            expect(store.status.value).toBe('loading');
+            expect(signalCallback).toHaveBeenCalledTimes(1); // Triggered by status ref change
+
+            // Wait for the async action to complete
+            await fetchDataPromise;
+
+            // Check final state and signal calls
+            expect(store.status.value).toBe('success');
+            expect(store.data.value).toBe('Fetched Setup Data!');
+            // Two more calls expected: one for data ref, one for status ref
+            expect(signalCallback).toHaveBeenCalledTimes(3);
+
+            unsubscribe();
+        });
+
+        // Test getter reactivity with async action (Options Store)
+        it('Options Store: getters should update reactively after async action completes', async () => {
+            const storeId = 'asyncGetterOptions';
+            const useAsyncGetterStore = defineZestStore(storeId, {
+                state: () => ({ value: 0 }),
+                actions: {
+                    async incrementAfterDelay(amount: number) {
+                        await delay(10);
+                        this.value += amount;
+                    }
+                },
+                getters: {
+                    doubled: (state) => state.value * 2
+                }
+            });
+
+            const store = useAsyncGetterStore();
+            expect(store.value).toBe(0);
+            expect(store.doubled).toBe(0);
+
+            const actionPromise = store.incrementAfterDelay(5);
+
+            // Getter should still be 0 before await completes
+            expect(store.doubled).toBe(0);
+
+            await actionPromise;
+
+            // Getter should update after action completion
+            expect(store.value).toBe(5);
+            expect(store.doubled).toBe(10);
         });
     });
 }); 

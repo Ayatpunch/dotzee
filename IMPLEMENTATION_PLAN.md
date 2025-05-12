@@ -147,10 +147,10 @@ This structure is a guideline and may be refined as development progresses and n
 
 2.  **Asynchronous Actions:**
 
-    - [ ] Ensure `actions` can be `async` functions.
-    - [ ] State mutations within async actions (e.g., after an `await`) should still trigger reactivity correctly.
-    - [ ] No special handling needed if the reactive core and `this` binding are solid.
-    - [ ] Unit tests for async actions (e.g., fetching data and updating state).
+    - [x] Ensure `actions` can be `async` functions.
+    - [x] State mutations within async actions (e.g., after an `await`) should still trigger reactivity correctly.
+    - [x] No special handling needed if the reactive core and `this` binding are solid.
+    - [x] Unit tests for async actions (e.g., fetching data and updating state) added and passing.
 
 3.  **Advanced TypeScript Typing:**
 

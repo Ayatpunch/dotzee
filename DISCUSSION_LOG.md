@@ -100,3 +100,11 @@
   - Existing tests cover basic calculation, reactivity, caching, and access within actions.
   - Concluded that the main work for this task is to add *specific unit tests* to rigorously verify the fine-grained dependency tracking and selective re-evaluation of getters, ensuring they don't re-run unnecessarily when unrelated state changes.
   - Decided against implementing `this` access within getters for now, keeping the simpler `(state) => value` signature.
+
+- **Task 2: Asynchronous Actions**
+  - Discussed the requirement for supporting `async` actions in both Options and Setup stores.
+  - Confirmed the hypothesis that the existing reactivity system (`Proxy` traps and `ref` setters) and `this` binding should inherently handle state mutations after `await` without core modifications.
+  - Added unit tests to `src/store/defineZestStore.test.ts` specifically covering:
+    - Options Store: `async` actions modifying state after `await`, triggering the change signal, and updating dependent getters.
+    - Setup Store: `async` actions modifying `ref`s after `await` and triggering the change signal.
+  - Confirmed that all added tests passed, verifying correct asynchronous action handling and reactivity.
