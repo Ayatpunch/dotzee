@@ -27,12 +27,14 @@ const CounterOptions: React.FC = () => {
 
     const handleIncrement = () => {
         counter.increment();
-        // console.log("Incremented Options Store"); // Can remove console logs now
     };
 
     const handleDecrement = () => {
         counter.decrement();
-        // console.log("Decremented Options Store"); // Can remove console logs now
+    };
+
+    const handleIncrementAsync = () => {
+        counter.incrementAsync(800); // Use a shorter delay for better UX
     };
 
     return (
@@ -42,11 +44,24 @@ const CounterOptions: React.FC = () => {
             <p className={`count-display ${isChanging ? 'changing' : ''}`}>
                 {counter.count}
             </p>
+
+            {/* Display getters */}
+            <div className="getters-section">
+                <p><strong>Doubled:</strong> <span>{counter.doubledCount}</span></p>
+                <p><strong>Status:</strong> <span>{counter.countStatus}</span></p>
+            </div>
+
             <div className="button-group">
                 <button onClick={handleDecrement}>Decrement</button>
                 <button onClick={handleIncrement}>Increment</button>
+                <button
+                    onClick={handleIncrementAsync}
+                    disabled={counter.loading}
+                    className={counter.loading ? 'loading' : ''}
+                >
+                    {counter.loading ? 'Loading...' : 'Async +1'}
+                </button>
             </div>
-            {/* <p>Options Store Signal: {useCounterOptionsStore.$changeSignal.value}</p> */} {/* Can remove signal display */}
         </div>
     );
 };

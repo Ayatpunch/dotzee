@@ -1,8 +1,15 @@
-import { defineZestStore, ref } from 'zest-state-library';
+import { defineZestStore, ref, computed } from 'zest-state-library';
 
 export const useCounterSetupStore = defineZestStore('counterSetup', () => {
     const count = ref(0);
     const name = ref('Setup Counter');
+    const loading = ref(false);
+
+    // Computed properties (getters)
+    const doubledCount = computed(() => count.value * 2);
+    const countStatus = computed(() => {
+        return count.value === 0 ? 'Zero' : count.value > 0 ? 'Positive' : 'Negative';
+    });
 
     function increment() {
         count.value++;
@@ -11,5 +18,21 @@ export const useCounterSetupStore = defineZestStore('counterSetup', () => {
         count.value--;
     }
 
-    return { count, name, increment, decrement };
+    async function incrementAsync(delay = 1000) {
+        loading.value = true;
+        await new Promise(resolve => setTimeout(resolve, delay));
+        count.value++;
+        loading.value = false;
+    }
+
+    return {
+        count,
+        name,
+        loading,
+        doubledCount,
+        countStatus,
+        increment,
+        decrement,
+        incrementAsync
+    };
 }); 

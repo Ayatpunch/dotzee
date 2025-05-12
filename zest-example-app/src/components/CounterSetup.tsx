@@ -27,12 +27,14 @@ const CounterSetup: React.FC = () => {
 
     const handleIncrement = () => {
         counter.increment(); // Call action directly
-        // console.log("Incremented Setup Store"); // Can remove console logs
     };
 
     const handleDecrement = () => {
         counter.decrement(); // Call action directly
-        // console.log("Decremented Setup Store"); // Can remove console logs
+    };
+
+    const handleIncrementAsync = () => {
+        counter.incrementAsync(800); // Use a shorter delay for better UX
     };
 
     return (
@@ -42,11 +44,24 @@ const CounterSetup: React.FC = () => {
             <p className={`count-display ${isChanging ? 'changing' : ''}`}>
                 {counter.count.value}
             </p> {/* Read count ref value */}
+
+            {/* Display computed properties */}
+            <div className="getters-section">
+                <p><strong>Doubled:</strong> <span>{counter.doubledCount.value}</span></p>
+                <p><strong>Status:</strong> <span>{counter.countStatus.value}</span></p>
+            </div>
+
             <div className="button-group">
                 <button onClick={handleDecrement}>Decrement</button>
                 <button onClick={handleIncrement}>Increment</button>
+                <button
+                    onClick={handleIncrementAsync}
+                    disabled={counter.loading.value}
+                    className={counter.loading.value ? 'loading' : ''}
+                >
+                    {counter.loading.value ? 'Loading...' : 'Async +1'}
+                </button>
             </div>
-            {/* <p>Setup Store Signal: {useCounterSetupStore.$changeSignal.value}</p> */} {/* Can remove signal display */}
         </div>
     );
 };

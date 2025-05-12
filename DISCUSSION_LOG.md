@@ -121,3 +121,19 @@
     - Verified inference of `async` action return types.
     - Verified the `useZestStore` hook returns a fully typed store instance.
   - Confirmed all type-checking tests passed, validating the current advanced typing approach.
+
+- **Task 4: Example Application Updates**
+  - Enhanced both Options and Setup stores to include getters and async actions:
+    - Added `doubledCount` and `countStatus` getters to the Options store
+    - Added `doubledCount` and `countStatus` computed properties to the Setup store
+    - Added `incrementAsync` async action to both stores with loading state
+  - Updated the counter components to display computed values and provide async action buttons:
+    - Added getters section to show computed values
+    - Added async action buttons with loading indicators
+  - Improved UI styling:
+    - Enhanced getters section with visual styling including badges and separation
+    - Added loading state animation for async buttons
+    - Ensured consistent design between Options and Setup store components
+    - Added proper styling for the third button
+    - Improved responsiveness for mobile devices
+  - Completed the export of the `computed` function from the library to support Setup stores.

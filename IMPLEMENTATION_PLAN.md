@@ -164,7 +164,7 @@ This structure is a guideline and may be refined as development progresses and n
     - [x] Explore mapped types, conditional types, and `infer` to achieve this - Existing types verified as sufficient for now.
 
 4.  **Example Application Updates:**
-    - [ ] Add examples demonstrating getters and async actions.
+    - [x] Add examples demonstrating getters and async actions.
 
 ## Phase 3: DevTools Integration
 

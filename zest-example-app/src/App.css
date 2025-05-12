@@ -261,10 +261,12 @@ body {
   transform: scale(1.2);
 }
 
+/* Button group update for 3 buttons */
 .button-group {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-  gap: 1.5rem;
+  gap: 1rem;
   margin-top: 2rem;
   width: 100%;
 }
@@ -279,18 +281,20 @@ body {
   font-weight: 600;
   cursor: pointer;
   transition:
-    background-color var(--transition),
+    all var(--transition),
     transform var(--transition),
     box-shadow var(--transition);
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 130px;
+  min-width: 110px; /* Reduced to fit 3 buttons better */
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  flex: 1;
 }
 
-.button-group button::before {
-  content: ''; /* We'll set icons via CSS background later */
+/* Updated selectors for decrement and increment buttons */
+.button-group button:nth-child(1)::before {
+  content: '';
   display: inline-block;
   width: 16px;
   height: 16px;
@@ -298,36 +302,37 @@ body {
   background-position: center;
   background-repeat: no-repeat;
   background-size: contain;
-}
-
-.button-group button:first-child::before {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 6v6m0 0v6m0-6h6m-6 0H6'%3E%3C/path%3E%3C/svg%3E");
-}
-
-.button-group button:last-child::before {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M20 12H4'%3E%3C/path%3E%3C/svg%3E");
 }
 
-.options-counter .button-group button {
-  background-color: var(--primary);
+.button-group button:nth-child(2)::before {
+  content: '';
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 6v6m0 0v6m0-6h6m-6 0H6'%3E%3C/path%3E%3C/svg%3E");
 }
 
-.options-counter .button-group button:hover {
-  background-color: var(--primary-light);
-  box-shadow: 0 10px 15px -3px rgba(124, 58, 237, 0.3);
+/* Async button icon */
+.button-group button:nth-child(3)::before {
+  content: '';
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15'%3E%3C/path%3E%3C/svg%3E");
 }
 
-.setup-counter .button-group button {
-  background-color: var(--secondary);
-}
-
-.setup-counter .button-group button:hover {
-  background-color: var(--secondary-light);
-  box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3);
-}
-
-.button-group button:active {
-  transform: scale(0.95);
+/* Remove the original last-child selector as it's no longer accurate */
+.button-group button:last-child::before {
+  content: none;
 }
 
 /* Store Type Labels */
@@ -438,4 +443,158 @@ body {
   .App > .subtitle {
     font-size: 1rem;
   }
+}
+
+/* Improved Getters Section */
+.getters-section {
+  margin: 1.5rem 0;
+  padding: 1.25rem;
+  background-color: rgba(0, 0, 0, 0.035);
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  text-align: left;
+  width: 100%;
+  position: relative;
+  backdrop-filter: blur(5px);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.05);
+}
+
+.options-counter .getters-section {
+  background-color: rgba(124, 58, 237, 0.06);
+  border: 1px solid rgba(124, 58, 237, 0.1);
+}
+
+.setup-counter .getters-section {
+  background-color: rgba(16, 185, 129, 0.06);
+  border: 1px solid rgba(16, 185, 129, 0.1);
+}
+
+.getters-section:before {
+  content: 'Computed Values';
+  position: absolute;
+  top: -10px;
+  left: 15px;
+  background-color: var(--surface);
+  padding: 0 10px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.options-counter .getters-section:before {
+  color: var(--primary);
+}
+
+.setup-counter .getters-section:before {
+  color: var(--secondary);
+}
+
+.getters-section p {
+  margin: 0.75rem 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  padding-bottom: 0.75rem;
+}
+
+.getters-section p:not(:last-child) {
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.1);
+}
+
+.getters-section strong {
+  color: var(--text-secondary);
+  margin-right: 1rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.getters-section span {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.options-counter .getters-section span {
+  color: var(--primary-dark);
+}
+
+.setup-counter .getters-section span {
+  color: var(--secondary-dark);
+}
+
+/* Improved Loading Button */
+button.loading {
+  position: relative;
+  cursor: wait;
+  opacity: 0.8;
+  color: transparent !important;
+}
+
+button.loading::after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  top: 50%;
+  left: 50%;
+  margin-left: -10px;
+  margin-top: -10px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  animation: button-loading-spinner 0.8s linear infinite;
+}
+
+.options-counter button.loading::after {
+  border-top-color: white;
+}
+
+.setup-counter button.loading::after {
+  border-top-color: white;
+}
+
+@keyframes button-loading-spinner {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Fix for button group responsiveness */
+@media (max-width: 400px) {
+  .button-group {
+    flex-direction: column;
+  }
+
+  .button-group button {
+    width: 100%;
+  }
+}
+
+/* Fix for missing button styles */
+.options-counter .button-group button {
+  background-color: var(--primary);
+}
+
+.options-counter .button-group button:hover {
+  background-color: var(--primary-light);
+  box-shadow: 0 10px 15px -3px rgba(124, 58, 237, 0.3);
+  transform: translateY(-2px);
+}
+
+.setup-counter .button-group button {
+  background-color: var(--secondary);
+}
+
+.setup-counter .button-group button:hover {
+  background-color: var(--secondary-light);
+  box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3);
+  transform: translateY(-2px);
+}
+
+.button-group button:active {
+  transform: scale(0.95) !important;
 }

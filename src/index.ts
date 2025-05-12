@@ -20,4 +20,4 @@ export { useZestStore } from './react';
 // Re-export core reactivity primitives (potentially useful for setup stores or advanced usage)
 export { ref, isRef } from './reactivity/ref';
 export { reactive } from './reactivity/reactive';
-// export { computed } from './reactivity/computed'; // Add when implemented
+export { computed } from './reactivity/computed'; // Add when implemented
