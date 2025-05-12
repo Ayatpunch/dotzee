@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { defineZestStore, _test_storeRegistry } from './defineZestStore'; // Import registry
+import { getGlobalZestRegistry } from './registry';
+import { defineZestStore } from './defineZestStore';
 import { ref, subscribeRef, isRef, Ref } from '../reactivity/ref';
 import { reactive, subscribe } from '../reactivity/reactive';
 import { computed, isComputed, ComputedRef } from '../reactivity/computed'; // Make sure ComputedRef is imported if needed
@@ -26,22 +27,22 @@ interface MyStoreMutateType {
     setName: (newName: string) => void;
 }
 
-// Helper to get the change signal ref for a store ID directly from registry (still useful for some tests)
+// Helper to get the change signal ref for a store ID directly from the global registry
 const getStoreChangeSignalFromRegistry = (id: string): Ref<number> | undefined => {
-    const entry = _test_storeRegistry.get(id);
+    const entry = getGlobalZestRegistry().get(id);
     return entry?.changeSignal;
 };
 
-// Helper remains useful for checking if an entry exists
+// Helper to get an entry from the global registry
 const getStoreRegistryEntry = (id: string): StoreRegistryEntry<StoreInstanceType> | undefined => {
-    return _test_storeRegistry.get(id);
+    return getGlobalZestRegistry().get(id);
 };
 
 describe('defineZestStore', () => {
 
-    // Clear registry before each test
+    // Clear the global registry before each test
     beforeEach(() => {
-        _test_storeRegistry.clear();
+        getGlobalZestRegistry().clear();
     });
 
     // --- Common Hook Structure Tests --- //

@@ -186,3 +186,51 @@
     - Verified action logging (e.g., `counterOptions/increment`, `counterSetup/increment`) and state updates for both store types.
     - Confirmed Time Travel functionality (jumping to past states) correctly updates the example application's UI.
   - Decided that explicit disabling of DevTools *within the library* for production builds is not strictly necessary, as conditional import/call by the user (as done in example app) is sufficient. The `typeof window === 'undefined'` check already prevents server-side execution of connection logic.
+
+## Phase 4: SSR, Modularity & Plugins
+
+- **Task 1: Server-Side Rendering (SSR) Support**
+  - **Registry Scoping:**
+    - Identified the global `storeRegistry` as a potential issue for concurrent requests in SSR environments.
+    - Created `src/store/registry.ts` introducing the concept of multiple registries (global vs. active/request-scoped).
+    - Implemented `createZestRegistry`, `setActiveZestRegistry`, `resetActiveZestRegistry`, `getActiveZestRegistry`, and `getGlobalZestRegistry` functions to manage registry instances.
+    - Refactored `defineZestStore` to use `getActiveZestRegistry()` implicitly, allowing store definitions to work within the context of the currently active registry (set per request on the server).
+    - Updated DevTools connector functions (`getGlobalZestStateSnapshot`, `_internal_initStoreState`, `_internal_sendAction`, time travel logic) to accept or use the appropriate registry instance.
+    - Fixed resulting test failures in `defineZestStore.test.ts` by explicitly using `getGlobalZestRegistry` in tests where a specific registry wasn't activated.
+  - **Hydration & Serialization:**
+    - Created `src/ssr/hydration.ts` with `hydrateZestState` and its helper `_internal_hydrateStoreState`. This function applies a server-provided state snapshot to a client-side registry (typically the global one) *without* triggering the `$changeSignal`, preventing unnecessary re-renders during initial hydration.
+    - Created `src/ssr/serialization.ts` with `serializeZestState`. This function uses `getGlobalZestStateSnapshot` internally to capture the current state of a given registry (e.g., the request-specific registry on the server) into a serializable JSON format.
+    - Exported these functions via `src/ssr/index.ts` and the main library entry point (`src/index.ts`).
+    - Fixed export errors related to the `ZestRegistry` type and `getGlobalZestRegistry`.
+  - **SSR Testing (Vite Attempt - Aborted):**
+    - Initially attempted to test SSR integration within the existing Vite-based `zest-example-app`.
+    - Installed `express` and created basic server (`server.js`), entry (`entry-server.tsx`, `entry-client.tsx`), and modified `index.html` / `package.json` for SSR builds/scripts.
+    - Encountered persistent errors during server execution (`node server.js`):
+        - `path-to-regexp` related errors, potentially from Vite/Express routing interactions (attempts to fix with different route handlers failed).
+        - `Module not found: zest-state-library` errors despite rebuilding library, trying relative path dependencies (`file:../`), and removing Turbopack flags.
+    - Decided to abandon the Vite SSR attempt due to these blocking issues and switch to a framework with more established SSR patterns (Next.js).
+  - **SSR Testing (Next.js - Successful):**
+    - Reverted SSR-related changes in the Vite example app.
+    - Created a new example project `zest-next-example` using `create-next-app` with the App Router.
+    - Linked the `zest-state-library` using a relative file path dependency (`"zest-state-library": "file:../"`) in `package.json` after initial linking issues, requiring a library rebuild.
+    - Implemented the recommended SSR pattern for App Router:
+        - **`app/page.tsx` (Server Component):**
+            - Creates a new registry for the request (`createZestRegistry`).
+            - Activates this registry (`setActiveZestRegistry`).
+            - Ensures the relevant store definition (`useCounterOptionsStore`) runs within the server context, registering the store in the request-scoped registry.
+            - Accesses the store instance *directly* from the registry (e.g., `registry.get('counterOptions')`) to potentially set initial state (though not done in the basic example).
+            - Serializes the state from the request registry (`serializeZestState`).
+            - Resets the active registry (`resetActiveZestRegistry`) before sending the response.
+            - Passes the serialized state as a prop to a Client Component.
+        - **`app/ClientPage.tsx` (Client Component):**
+            - Receives the `initialZestState` prop.
+            - Uses `useEffect` (running only once on mount) to:
+                - Get the client-side global registry (`getGlobalZestRegistry`).
+                - Call `hydrateZestState` with the global registry and the received `initialZestState`.
+                - Optionally enable DevTools (`enableZestDevTools`).
+            - Uses the standard `useZestStore(useCounterOptionsStore)` hook to access the store reactively for the UI.
+    - Refactored `ClientPage.tsx` into a `components/` directory for better structure.
+    - Debugged and fixed an error where `getGlobalZestRegistry` wasn't exported correctly by adjusting exports in `src/store/index.ts` and rebuilding the library.
+    - Implicitly confirmed the correct pattern avoids calling React hooks like `useZestStore` in Server Components, resolving potential `useSyncExternalStore` errors in that context.
+    - Successfully verified the SSR flow: state rendered on the server, hydrated on the client without flicker, and subsequent interactions were reactive. DevTools integration also worked correctly after hydration.
+    - Marked Phase 4, Task 1 (SSR Support) as complete in `IMPLEMENTATION_PLAN.md`.

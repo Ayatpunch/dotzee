@@ -1,348 +1,243 @@
-import { StoreInstanceType, StoreRegistryEntry } from '../store/types';
-import { isRef } from '../reactivity/ref'; // Import isRef
+import { isRef } from '../reactivity/ref';
+import type { StoreRegistryEntry, StoreInstanceType } from '../store/types';
+// Import registry functions and type
+import { ZestRegistry, getActiveZestRegistry, getGlobalZestRegistry } from '../store/registry';
 
-// Type definition for the Redux DevTools Extension API
-// Based on common usage, might need refinement based on actual API interaction
-interface ReduxDevToolsExtension {
-    connect(options?: DevToolsOptions): ReduxDevToolsInstance;
-    // Potentially other methods if needed directly
-}
-
-interface ReduxDevToolsInstance {
-    init(state: any): void;
-    send(action: string | { type: string;[key: string]: any }, state: any): void;
-    subscribe(listener: (message: any) => void): () => void;
-    unsubscribe(): void;
-    // Potentially other methods like error, liftedy..
+interface DevToolsExtension {
+    connect(options?: DevToolsOptions): DevToolsInstance;
+    // other potential methods if needed
 }
 
 interface DevToolsOptions {
-    name?: string; // Instance name
-    trace?: boolean | (() => string);
-    traceLimit?: number;
-    actionsBlacklist?: string | string[];
-    actionsWhitelist?: string | string[];
-    // Add other options from Redux DevTools Extension API as needed
-    [key: string]: any; // For other potential options
+    name?: string;
+    trace?: boolean;
+    // other options as per Redux DevTools Extension API
 }
 
-// --- Global State for DevTools Connection ---
+interface DevToolsInstance {
+    send(action: string | { type: string;[key: string]: any }, state: any): void;
+    subscribe(listener: (message: DevToolsMessage) => void): void;
+    init(state: any): void;
+    unsubscribe(): void;
+    // other methods
+}
 
-let connection: ReduxDevToolsInstance | null = null;
-let isEnabled = false; // Flag to control connection attempt - Renamed for clarity
-let registryRef: Map<string, StoreRegistryEntry<StoreInstanceType>> | null = null; // Reference to the store registry
+interface DevToolsMessage {
+    type: string;
+    payload?: any;
+    state?: string; // JSON string representing the state
+    id?: any; // Connection ID
+}
+
+let connection: DevToolsInstance | null = null;
+// let appStoreRegistry: Map<string, StoreRegistryEntry<StoreInstanceType>> | null = null; // REMOVED
+let devToolsOptions: DevToolsOptions | null = null;
+
+const ZEST_DEVTOOLS_INIT_ACTION_PREFIX = '@@ZEST_INIT';
 
 /**
  * Checks if Zest DevTools integration is currently enabled and connected.
- *
- * @returns {boolean} True if DevTools are enabled and connected, false otherwise.
+ * @returns {boolean} True if DevTools are enabled, false otherwise.
  */
 export function isZestDevToolsEnabled(): boolean {
-    return isEnabled && connection !== null;
+    return connection !== null;
 }
 
 /**
- * Enables Zest DevTools integration. Attempts to connect to the Redux DevTools Extension.
- * Should be called once during application setup.
- *
- * @param storeRegistryInstance A Map instance representing the Zest store registry.
- * @param options Configuration options for the Redux DevTools connection.
+ * Creates a serializable snapshot of the current state of all stores in the provided registry.
+ * For Setup Stores, it unwraps refs and excludes functions.
+ * For Options Stores, it uses `initialStateKeys` to extract only state properties.
+ * @param registry The ZestRegistry instance to snapshot.
+ * @returns A serializable object representing the global Zest state.
+ * @internal
  */
-export function enableZestDevTools(
-    storeRegistryInstance: Map<string, StoreRegistryEntry<StoreInstanceType>>,
-    options: DevToolsOptions = {}
-): void {
-    if (typeof window === 'undefined' || isEnabled) {
-        return; // Don't run on server or if already enabled
+export function getGlobalZestStateSnapshot(registry: ZestRegistry): Record<string, any> {
+    const globalState: Record<string, any> = {};
+    if (!registry) {
+        console.warn('[Zest DevTools] Cannot create snapshot: Registry is not available.');
+        return globalState;
     }
 
-    registryRef = storeRegistryInstance; // Store the registry reference
+    registry.forEach((entry, storeId) => {
+        const storeState: Record<string, any> = {};
+        if (entry.isSetupStore) {
+            // For setup stores, iterate over the instance properties
+            for (const key in entry.instance) {
+                if (Object.prototype.hasOwnProperty.call(entry.instance, key)) {
+                    const prop = entry.instance[key];
+                    if (typeof prop !== 'function') { // Exclude functions
+                        storeState[key] = isRef(prop) ? prop.value : prop;
+                    }
+                }
+            }
+        } else {
+            // For options stores, use initialStateKeys to get only state props
+            if (entry.initialStateKeys) {
+                entry.initialStateKeys.forEach(key => {
+                    storeState[key] = (entry.instance as any)[key];
+                });
+            } else {
+                // Fallback if initialStateKeys is not defined (should not happen for Options stores)
+                // This part might need careful review if options stores can exist without initialStateKeys
+                Object.assign(storeState, (entry.instance as any));
+            }
+        }
+        globalState[storeId] = storeState;
+    });
+    return globalState;
+}
 
-    const devToolsExtension = (window as any).__REDUX_DEVTOOLS_EXTENSION__ as ReduxDevToolsExtension | undefined;
+/**
+ * Resets the state of a single store to a target state and triggers its change signal.
+ * @param entry The store registry entry.
+ * @param targetStoreState The target state for the individual store.
+ * @internal
+ */
+function _internal_resetStoreState(entry: StoreRegistryEntry<StoreInstanceType>, targetStoreState: Record<string, any>): void {
+    if (entry.isSetupStore) {
+        for (const key in targetStoreState) {
+            if (Object.prototype.hasOwnProperty.call(targetStoreState, key) && entry.instance[key] && isRef(entry.instance[key])) {
+                entry.instance[key].value = targetStoreState[key];
+            }
+        }
+    } else {
+        // For options stores, directly assign to the instance properties
+        // This relies on the reactive proxy to handle updates.
+        // Ensure only keys present in targetStoreState are updated.
+        if (entry.initialStateKeys) {
+            entry.initialStateKeys.forEach(key => {
+                if (Object.prototype.hasOwnProperty.call(targetStoreState, key)) {
+                    (entry.instance as any)[key] = targetStoreState[key];
+                }
+            });
+        } else {
+            // Fallback, less safe: merge the whole state
+            // This might accidentally add non-state properties if targetStoreState is not clean
+            Object.assign(entry.instance, targetStoreState);
+        }
+    }
+    entry.changeSignal.value++; // Trigger update
+}
 
-    if (!devToolsExtension) {
-        console.warn('[Zest] Redux DevTools Extension not found. Install it to enable debugging.');
+/**
+ * Enables Zest DevTools integration by connecting to the Redux DevTools Extension.
+ * Call this function once in your application setup.
+ *
+ * @param options Configuration options for the DevTools connection.
+ */
+export function enableZestDevTools(options?: DevToolsOptions): void {
+    if (typeof window === 'undefined' || !(window as any).__REDUX_DEVTOOLS_EXTENSION__) {
+        console.warn('[Zest DevTools] Redux DevTools Extension not found. Zest DevTools will not be enabled.');
+        return;
+    }
+    if (connection) {
+        console.warn('[Zest DevTools] Already enabled. Skipping.');
         return;
     }
 
-    try {
-        connection = devToolsExtension.connect({
-            name: options.name || 'Zest App', // Default instance name
-            ...options, // Pass other user-provided options
-        });
-        isEnabled = true;
-        console.log('[Zest] Connected to Redux DevTools Extension.');
+    // appStoreRegistry = storeRegistryInstance; // REMOVED
+    devToolsOptions = options || {};
 
-        // Subscribe to messages from DevTools (e.g., for time travel)
-        connection.subscribe((message) => {
-            // console.log('[Zest DevTools] Received message:', message);
+    const extension = (window as any).__REDUX_DEVTOOLS_EXTENSION__ as DevToolsExtension;
+    connection = extension.connect(devToolsOptions);
 
-            // Check for Time Travel messages
-            if (message.type === 'DISPATCH' && (message.payload?.type === 'JUMP_TO_STATE' || message.payload?.type === 'JUMP_TO_ACTION')) {
-                console.log(`[Zest DevTools] Time travel requested: ${message.payload.type}`);
+    connection.subscribe((message: DevToolsMessage) => {
+        if (message.type === 'DISPATCH' && message.payload) {
+            switch (message.payload.type) {
+                case 'JUMP_TO_STATE':
+                case 'JUMP_TO_ACTION':
+                    if (message.state) {
+                        try {
+                            const globalZestState = JSON.parse(message.state) as Record<string, any>;
+                            const currentActiveRegistry = getActiveZestRegistry(); // Get active registry for the jump
 
-                if (!registryRef) {
-                    console.error('[Zest DevTools] Cannot time travel: Store registry reference is missing.');
-                    return;
-                }
-
-                try {
-                    const targetGlobalState = JSON.parse(message.state);
-                    // console.log('[Zest DevTools] Target state snapshot:', targetGlobalState);
-
-                    // Iterate over the stores defined in the target state snapshot
-                    for (const storeId in targetGlobalState) {
-                        if (Object.prototype.hasOwnProperty.call(targetGlobalState, storeId)) {
-                            const targetStoreState = targetGlobalState[storeId];
-                            const entry = registryRef.get(storeId);
-
-                            if (entry) {
-                                // Reset the state of the specific store
-                                _internal_resetStoreState(entry, targetStoreState);
-                            } else {
-                                console.warn(`[Zest DevTools] Store ID "${storeId}" found in time travel state but not in current registry.`);
-                                // This store might have been added/removed since the snapshot was taken.
-                            }
+                            Object.keys(globalZestState).forEach(storeId => {
+                                const storeEntry = currentActiveRegistry.get(storeId);
+                                if (storeEntry && globalZestState[storeId]) {
+                                    _internal_resetStoreState(storeEntry, globalZestState[storeId]);
+                                }
+                            });
+                        } catch (e) {
+                            console.error('[Zest DevTools] Error parsing state for time travel:', e);
                         }
                     }
-                    console.log(`[Zest DevTools] Finished attempting state reset for time travel.`);
-                } catch (error) {
-                    console.error('[Zest DevTools] Error processing time travel state:', error);
-                }
+                    break;
+                // Handle other dispatch actions if needed
             }
-        });
+        }
+    });
 
-    } catch (error) {
-        console.error('[Zest] Error connecting to Redux DevTools Extension:', error);
-        connection = null;
-        isEnabled = false;
-    }
+    // Initial state for DevTools can be an empty object or a snapshot if available
+    // Stores will send their individual initial states via _internal_initStoreState
+    connection.init({}); // Initialize with an empty state, stores will populate it
+
+    console.log('[Zest DevTools] Connected to Redux DevTools Extension.', devToolsOptions);
 }
 
 /**
- * Disconnects from the Redux DevTools Extension.
+ * Disconnects from the Redux DevTools Extension and cleans up.
  */
 export function disconnectZestDevTools(): void {
     if (connection) {
-        connection.unsubscribe(); // Assuming unsubscribe is the way to disconnect based on common patterns
+        connection.unsubscribe();
         connection = null;
-        isEnabled = false;
-        registryRef = null; // Clear registry reference
-        console.log('[Zest] Disconnected from Redux DevTools Extension.');
+        // appStoreRegistry = null; // REMOVED
+        devToolsOptions = null;
+        console.log('[Zest DevTools] Disconnected from Redux DevTools Extension.');
     }
 }
 
 /**
- * Creates a serializable snapshot of the current state of all registered Zest stores.
- *
- * @returns A record where keys are store IDs and values are the serializable state.
- */
-function getGlobalZestStateSnapshot(): Record<string, any> {
-    if (!registryRef) {
-        console.warn('[Zest DevTools] Store registry reference not available for snapshot.');
-        return {};
-    }
-
-    const snapshot: Record<string, any> = {};
-    registryRef.forEach((entry, id) => {
-        const storeInstance = entry.instance;
-        let serializableState: any = {};
-
-        if (entry.isSetupStore) {
-            // --- Serialize Setup Store --- //
-            if (typeof storeInstance === 'object' && storeInstance !== null) {
-                for (const key in storeInstance) {
-                    if (Object.prototype.hasOwnProperty.call(storeInstance, key)) {
-                        const prop = (storeInstance as any)[key];
-                        if (typeof prop !== 'function') { // Exclude functions
-                            serializableState[key] = isRef(prop) ? prop.value : prop;
-                        }
-                    }
-                }
-            } else {
-                // Handle cases where instance might not be an object (unlikely)
-                serializableState = storeInstance;
-            }
-        } else {
-            // --- Serialize Options Store --- //
-            if (entry.initialStateKeys && typeof storeInstance === 'object' && storeInstance !== null) {
-                // Use the stored keys to extract only the state properties
-                entry.initialStateKeys.forEach(key => {
-                    // Check if the key still exists on the instance (it should)
-                    if (Object.prototype.hasOwnProperty.call(storeInstance, key)) {
-                        serializableState[key] = (storeInstance as any)[key];
-                    }
-                });
-            } else {
-                // Fallback or warning if keys are missing for an options store
-                console.warn(`[Zest DevTools - ${id}] Missing initialStateKeys for options store. Falling back to basic serialization.`);
-                // Fallback to simple object clone excluding functions (might include getters)
-                if (typeof storeInstance === 'object' && storeInstance !== null) {
-                    for (const key in storeInstance) {
-                        if (Object.prototype.hasOwnProperty.call(storeInstance, key)) {
-                            const prop = (storeInstance as any)[key];
-                            if (typeof prop !== 'function') {
-                                serializableState[key] = prop;
-                            }
-                        }
-                    }
-                } else {
-                    serializableState = storeInstance;
-                }
-            }
-        }
-
-        snapshot[id] = serializableState;
-    });
-
-    return snapshot;
-}
-
-/**
- * Sends the initial state of a newly created store to DevTools.
- * Called internally by defineZestStore if DevTools are enabled.
- *
+ * Sends the initial state of a specific store to DevTools.
+ * Called from defineZestStore when a store is initialized.
+ * @param storeId The ID of the store.
+ * @param initialState The serializable initial state of the store.
+ * @param registryForSnapshot The ZestRegistry to use for generating the full global state snapshot.
  * @internal
- * @param storeId The unique ID of the store.
- * @param state The initial state of the store.
  */
-export function _internal_initStoreState(storeId: string, state: StoreInstanceType): void {
+export function _internal_initStoreState(storeId: string, initialState: any, registryForSnapshot: ZestRegistry): void {
     if (!connection) return;
 
-    try {
-        // DevTools usually expects a single state object. We might send the whole registry state later,
-        // but for init, sending the individual store state might be okay, prefixed.
-        // However, the standard is usually `init(initialStateObject)`.
-        // Let's rethink this - init is usually called ONCE for the whole app state.
-        // We might need a central state object representing all Zest stores.
+    const actionType = `${ZEST_DEVTOOLS_INIT_ACTION_PREFIX}/${storeId}`;
+    const globalStateSnapshot = getGlobalZestStateSnapshot(registryForSnapshot);
 
-        // --- Alternative Approach: Send an action for store init ---
-        // Treat store initialization like an action
-        const action = { type: `@@ZEST_INIT/${storeId}` };
-        // Get the full current state AFTER this store is conceptually added
-        const globalStateSnapshot = getGlobalZestStateSnapshot();
-
-        // Let's stick to the `send` method for initialization for now.
-        // It's more flexible if `init` is meant for the absolute initial state.
-        console.log(`[Zest DevTools - ${storeId}] Sending initial state.`);
-        // Send requires current state *after* action. Since this is init, state *is* the current state.
-        // Send the formatted action and the complete global state.
-        connection.send(action, globalStateSnapshot);
-
-        // --- Original thought: Using connection.init() ---
-        // connection.init({ [storeId]: state }); // This would replace the entire DevTools state
-
-    } catch (error) {
-        console.error(`[Zest DevTools - ${storeId}] Error sending initial state:`, error);
-    }
+    // It seems devtools.init might be better here for each store, but Pinia uses send.
+    // For now, we send an action. We might need to adjust how DevTools expects initial states from multiple sources.
+    // The current approach sends the *full global state* with each store's init action.
+    connection.send({ type: actionType, payload: initialState /* or simply storeId? */ }, globalStateSnapshot);
+    // console.log(`[Zest DevTools - ${storeId}] Sent initial state:`, initialState, `Global Snapshot:`, globalStateSnapshot);
 }
 
 /**
- * Sends an action and the resulting state to DevTools.
- *
- * @internal
+ * Sends an action and the current global state to DevTools.
+ * Called from the wrappers in defineZestStore after an action is executed.
  * @param storeId The ID of the store where the action occurred.
- * @param action The action identifier (e.g., 'increment') or a Redux-style action object.
- * @param payload Optional payload for the action.
- * @param _stateAfterStoreSpecific The state of the *specific store* after the action.
+ * @param actionName The name of the action.
+ * @param payload The payload of the action (if any).
+ * @param storeInstance (Currently unused, but was part of the signature - can be removed if not needed for future formatting)
+ * @internal
  */
 export function _internal_sendAction(
     storeId: string,
-    action: string | { type: string;[key: string]: any },
-    payload: any | undefined,
-    _stateAfterStoreSpecific: StoreInstanceType // Parameter renamed, no longer used directly
+    actionName: string,
+    payload: any,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    storeInstance?: StoreInstanceType // Keep for now, might be useful for payload formatting later
 ): void {
     if (!connection) return;
 
-    try {
-        const actionToSend = typeof action === 'string'
-            ? { type: `${storeId}/${action}`, ...(payload !== undefined && { payload }) }
-            : action; // Use the provided action object directly if it's not a string
+    const actionType = `${storeId}/${actionName}`;
+    // Get snapshot of the currently active registry's state
+    const globalStateSnapshot = getGlobalZestStateSnapshot(getActiveZestRegistry());
 
-        console.log(`[Zest DevTools - ${storeId}] Sending action:`, actionToSend.type);
+    const actionPayload = {
+        // Consider more detailed payload formatting here if needed
+        // For example, array of args, or just the first arg if simple
+        payload: payload,
+    };
 
-        // We need the *global* state here for DevTools.
-        const globalStateSnapshot = getGlobalZestStateSnapshot();
-
-        connection.send(actionToSend, globalStateSnapshot);
-
-    } catch (error) {
-        console.error(`[Zest DevTools - ${storeId}] Error sending action "${String(action)}":`, error);
-    }
-}
-
-/**
- * Resets the state of a single store instance based on a target state snapshot.
- * Handles differences between Options and Setup stores.
- *
- * @internal
- * @param entry The StoreRegistryEntry for the store to reset.
- * @param targetState The target state object for this specific store.
- */
-function _internal_resetStoreState(entry: StoreRegistryEntry<StoreInstanceType>, targetState: Record<string, any>): void {
-    const { instance, isSetupStore, id, changeSignal } = entry;
-    // console.log(`[Zest DevTools - ${id}] Resetting state for ${isSetupStore ? 'Setup' : 'Options'} store.`);
-
-    try {
-        if (isSetupStore) {
-            // --- Reset Setup Store --- //
-            if (typeof instance === 'object' && instance !== null) {
-                for (const key in targetState) {
-                    if (Object.prototype.hasOwnProperty.call(targetState, key)) {
-                        const targetValue = targetState[key];
-                        const currentProp = (instance as any)[key];
-
-                        if (Object.prototype.hasOwnProperty.call(instance, key)) {
-                            if (isRef(currentProp) && !isRef(targetValue)) {
-                                // If current is a ref, update its value
-                                if (currentProp.value !== targetValue) {
-                                    currentProp.value = targetValue;
-                                }
-                            } else if (currentProp !== targetValue) {
-                                // Handle plain values or potentially replacing refs/other objects directly
-                                // This might disconnect reactivity if we replace a ref object entirely
-                                // Only assigning to .value is safer for refs.
-                                // For non-refs, direct assignment might be okay, but potentially complex.
-                                // Let's stick to updating .value for refs for now.
-                                console.warn(`[Zest DevTools - ${id}] Skipping state reset for non-ref property "${key}" during time travel.`);
-                            }
-                        } else {
-                            // Property exists in target state but not current instance - might need creation?
-                            console.warn(`[Zest DevTools - ${id}] Property "${key}" exists in time travel state but not in current setup store instance.`);
-                        }
-                    }
-                }
-            } else {
-                console.warn(`[Zest DevTools - ${id}] Cannot reset non-object setup store instance during time travel.`);
-            }
-        } else {
-            // --- Reset Options Store --- //
-            if (typeof instance === 'object' && instance !== null && entry.initialStateKeys) {
-                // Iterate known state keys and update instance
-                entry.initialStateKeys.forEach(key => {
-                    if (Object.prototype.hasOwnProperty.call(targetState, key)) {
-                        const targetValue = targetState[key];
-                        if ((instance as any)[key] !== targetValue) {
-                            // Direct assignment should trigger reactivity via proxy
-                            (instance as any)[key] = targetValue;
-                        }
-                    } else {
-                        // Key defined in initial state but not in target state - potentially remove/reset?
-                        console.warn(`[Zest DevTools - ${id}] State key "${key}" missing in time travel state snapshot.`);
-                    }
-                });
-                // Also handle keys present in targetState but not in initialStateKeys? Unlikely but possible.
-            } else {
-                console.warn(`[Zest DevTools - ${id}] Cannot reset options store instance (invalid instance or missing keys) during time travel.`);
-            }
-        }
-
-        // IMPORTANT: After resetting state, trigger the store's change signal
-        // This is crucial for useSyncExternalStore to pick up the change.
-        changeSignal.value++;
-        // console.log(`[Zest DevTools - ${id}] Triggered change signal after state reset.`);
-
-    } catch (error) {
-        console.error(`[Zest DevTools - ${id}] Error resetting store state during time travel:`, error);
+    connection.send({ type: actionType, ...actionPayload }, globalStateSnapshot);
+    if (devToolsOptions?.trace) {
+        console.log(`[Zest DevTools TRACE - ${actionType}]`, payload, 'Global Snapshot:', globalStateSnapshot);
     }
 }

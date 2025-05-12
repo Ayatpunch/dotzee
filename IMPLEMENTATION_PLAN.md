@@ -211,35 +211,39 @@ This structure is a guideline and may be refined as development progresses and n
 
 1.  **Server-Side Rendering (SSR) Support:**
 
-    - [ ] Ensure `defineZestStore` can create fresh store instances per request on the server.
-      - [ ] Detect SSR environment (e.g., `typeof window === \'undefined\'`).
-      - [ ] Mechanism for providing a request-specific context or scope for stores.
-    - [ ] State Serialization:
-      - [ ] Provide a utility to get the current state of all active stores in a serializable format (e.g., JSON).
-    - [ ] Client-Side Hydration:
-      - [ ] Provide a utility to initialize stores on the client with state serialized from the server.
-      - [ ] Ensure `useSyncExternalStore` works correctly with hydrated state.
-    - [ ] Test with a basic SSR setup (e.g., Next.js or a simple Express server).
+    - [x] **Registry Scoping:** Implemented request-scoped registries (`createZestRegistry`, `setActiveZestRegistry`, `resetActiveZestRegistry`, `getActiveZestRegistry`) to prevent state sharing between requests on the server. `defineZestStore` now uses the active registry.
+    - [x] **State Serialization:** Implemented `serializeZestState(registry)` (using `getGlobalZestStateSnapshot` internally) to capture the state of a specific registry (e.g., the request registry on the server) into a serializable format.
+    - [x] **Client-Side Hydration:** Implemented `hydrateZestState(registry, snapshot)` to apply server state to client-side stores (typically the global registry) *before* React hydration, without triggering initial change signals.
+    - [x] **Integration Pattern & Testing:** Successfully integrated and tested the SSR flow using Next.js (App Router) demonstrating the pattern:
+        - Server Components manage the registry lifecycle for a request.
+        - Server Components ensure store definitions run and access store instances *directly from the registry* for initial state setup.
+        - Server Components serialize the state and pass it to Client Components.
+        - Client Components use `hydrateZestState` on mount and then use standard Zest hooks (`useZestStore`) for reactive UI.   ''
+    - [ ] ~~Test with a basic SSR setup (e.g., Next.js or a simple Express server).~~ (Covered by Next.js integration)
+    - [ ] ~~Ensure `useSyncExternalStore` works correctly with hydrated state.~~ (Verified through Next.js integration)
 
 2.  **Store Modularity & Lazy Loading:**
 
-    - [ ] Ensure stores register on first use automatically.
-    - [ ] Design for code-splitting: stores defined in dynamically imported chunks should work seamlessly.
+    - [ ] Ensure stores register on first use automatically (current behavior seems sufficient).
+    - [ ] Verify seamless operation with code-splitting (dynamic imports in frameworks like Next.js/Vite).
+    - [ ] Add specific examples/tests for lazy-loaded stores, ensuring correct hydration and DevTools interactions.
     - [ ] (Optional) Explore explicit API for manual store registration/unregistration if needed.
 
 3.  **Plugin System:**
 
     - [ ] Design a plugin API:
-      - [ ] Hooks into store lifecycle (e.g., on store creation, before/after action).
+      - [ ] Hooks into store lifecycle (e.g., `onStoreCreated`, `beforeAction`, `afterAction`).
       - [ ] Ability for plugins to extend store instances (add properties/methods).
       - [ ] Ability to subscribe to state changes globally or per store.
-    - [ ] Implement the plugin registration and execution mechanism.
+      - [ ] Consider plugin context (access to registry, store instance, etc.).
+    - [ ] Implement the plugin registration mechanism (e.g., `zest.use(plugin)`).
+    - [ ] Implement the plugin execution logic within `defineZestStore` and action wrappers.
     - [ ] Example Plugins:
       - [ ] Basic logger plugin.
       - [ ] Persistence plugin (e.g., sync to localStorage).
 
 4.  **Namespacing/IDs Refinement:**
-    - [ ] Solidify how store IDs are managed and ensure uniqueness.
+    - [ ] Solidify how store IDs are managed and ensure uniqueness (Documentation/Best Practices).
     - [ ] Consider implications for DevTools and plugins.
 
 ## Phase 5: Polish, Testing, Documentation & Advanced Features

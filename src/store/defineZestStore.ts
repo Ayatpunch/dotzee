@@ -3,10 +3,8 @@ import { ref, setActiveStoreTrigger, clearActiveStoreTrigger, Ref, isRef } from 
 import { computed } from '../reactivity/computed';
 // Import DevTools connector functions and state
 import { _internal_initStoreState, isZestDevToolsEnabled, _internal_sendAction } from '../devtools/connector';
-// Need a way to check if enabled without importing the flag directly
-// Let's modify connector.ts later to export a getter function like `isZestDevToolsEnabled()`
-// For now, we'll assume a mechanism exists or skip the check temporarily for structure.
-// import { isDevToolsEnabled } from '../devtools/connector'; // Temporary import for concept
+// Import registry functions
+import { getActiveZestRegistry, getGlobalZestRegistry } from './registry'; // Import the getters
 
 import type {
     DefineZestStoreOptions,
@@ -19,18 +17,23 @@ import type {
     StoreRegistryEntry,
     ZestStoreHook,
     MappedGetters,
+    ZestRegistry // Import type if needed
 } from './types';
 
 // Registry uses the generic StoreRegistryEntry
-const storeRegistry = new Map<string, StoreRegistryEntry<StoreInstanceType>>();
+// const storeRegistry = new Map<string, StoreRegistryEntry<StoreInstanceType>>(); // REMOVED: No longer using local registry const
 
 // Export the registry itself for DevTools integration
 /** @internal */
-export { storeRegistry as _internal_storeRegistry };
+// export { storeRegistry as _internal_storeRegistry }; // REMOVED: Exporting getter instead
+/** @internal */
+export { getGlobalZestRegistry as _internal_storeRegistry }; // Keep this name for DevTools setup compatibility for now
+
 
 // Export for testing purposes ONLY
 /** @internal */
-export const _test_storeRegistry = storeRegistry;
+// export const _test_storeRegistry = storeRegistry; // REMOVED: Export getter if needed for tests, or use the global one
+
 
 // Overload signatures for defineZestStore
 export function defineZestStore<
@@ -51,7 +54,8 @@ export function defineZestStore<Id extends string, R extends SetupStoreReturnTyp
 // Implementation signature - Now returns a more specific ZestStoreHook<T>
 // We use a conditional type within the implementation's return type as well,
 // although the overloads are the primary source of truth for external users.
-export function defineZestStore<Id extends string,
+export function defineZestStore<
+    Id extends string,
     S extends object,
     A extends StoreActions<S, G>,
     G extends StoreGetters<S, G>,
@@ -61,9 +65,11 @@ export function defineZestStore<Id extends string,
     optionsOrSetup: DefineZestStoreOptions<S, A, G> | SetupStoreFunction<R>
 ): ZestStoreHook<StoreInstance<S, A, G> | R> { // More specific return type
 
-    // 1. Check registry - Return the stored hook directly if found
-    if (storeRegistry.has(id)) {
-        const entry = storeRegistry.get(id)!;
+    const currentRegistry = getActiveZestRegistry(); // Get the active registry
+
+    // 1. Check registry - Use the active registry
+    if (currentRegistry.has(id)) {
+        const entry = currentRegistry.get(id)!;
         // Return the *stored hook function* itself
         // Cast needed as registry stores the generic StoreRegistryEntry
         // The external overloads ensure the user gets the correctly typed hook
@@ -211,8 +217,8 @@ export function defineZestStore<Id extends string,
         initialStateKeys: initialStateKeys // <-- Set the keys (undefined for setup stores)
     };
 
-    // 5. Store the new entry
-    storeRegistry.set(id, registryEntry);
+    // 5. Store the new entry - Use the active registry
+    currentRegistry.set(id, registryEntry);
 
     // 5.1 If DevTools are enabled, send initial state
     if (isZestDevToolsEnabled()) {
@@ -241,7 +247,10 @@ export function defineZestStore<Id extends string,
             // The original options.state() gives the raw initial data.
             serializableState = (optionsOrSetup as DefineZestStoreOptions<S, A, G>).state();
         }
-        _internal_initStoreState(id, serializableState);
+        // TODO: Update _internal_initStoreState to accept the registry
+        // _internal_initStoreState(id, serializableState); // Pass currentRegistry here eventually
+        // Pass the current registry to the init function
+        _internal_initStoreState(id, serializableState, currentRegistry);
     }
 
     // 6. Return the newly created hook function (now correctly typed thanks to overloads and internal casting)

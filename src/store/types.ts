@@ -97,15 +97,22 @@ interface StoreHookProps {
  */
 export type ZestStoreHook<T extends StoreInstanceType> = (() => T) & StoreHookProps;
 
-/**
- * Represents an entry in the central store registry.
- * @template T The specific type of the store instance this entry holds.
- */
+// --- Registry --- //
+export type ZestRegistry = Map<string, StoreRegistryEntry<StoreInstanceType>>;
+
+// Represents the structure stored in the registry for each store
 export interface StoreRegistryEntry<T extends StoreInstanceType> {
-    hook: ZestStoreHook<T>; // The hook function to get the store instance
+    hook: ZestStoreHook<T>; // The hook function itself
     instance: T; // The actual store instance
-    changeSignal: Ref<number>; // The ref used to signal changes for this store
-    id: string; // The store's unique ID
-    isSetupStore: boolean; // True if defined with a setup function, false for options object
-    initialStateKeys?: string[]; // For options stores, the keys of the initial state object
-} 
+    changeSignal: Ref<number>; // The signal for this store
+    id: string; // The store's ID
+    isSetupStore: boolean; // Flag to distinguish store types
+    initialStateKeys?: string[]; // Keys of the initial state (Options Store only)
+}
+
+// Generic type for any store instance (used internally in registry)
+// Combined type for Options/Setup store instances
+// export type StoreInstanceType = StoreInstance<any, any, any> | SetupStoreReturnType; // REMOVED Duplicate
+
+// --- Options Store Specific Types --- //
+// ... existing code ... 
