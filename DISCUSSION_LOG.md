@@ -137,3 +137,52 @@
     - Added proper styling for the third button
     - Improved responsiveness for mobile devices
   - Completed the export of the `computed` function from the library to support Setup stores.
+
+## Phase 3: DevTools Integration
+
+- **Task 1: Redux DevTools Connector & Integration**
+  - Created `src/devtools/connector.ts` to manage interactions with the Redux DevTools Extension.
+  - Implemented `enableZestDevTools(storeRegistryInstance, options)`:
+    - Detects and connects to `window.__REDUX_DEVTOOLS_EXTENSION__`.
+    - Stores a reference to the application's main Zest store registry.
+    - Subscribes to messages from the DevTools extension.
+  - Implemented `disconnectZestDevTools()` for cleanup.
+  - Added `isZestDevToolsEnabled()` to check connection status.
+  - Implemented `getGlobalZestStateSnapshot()`:
+    - Iterates through the provided store registry.
+    - Serializes the state of each store, correctly handling differences between Options and Setup stores using metadata (`isSetupStore`, `initialStateKeys`) stored in the registry entry.
+    - For Setup Stores, unwraps `ref` values and excludes functions.
+    - For Options Stores, uses `initialStateKeys` to extract only state properties.
+  - Implemented `_internal_resetStoreState(entry, targetStoreState)` for time travel:
+    - Resets the state of an individual store based on a snapshot.
+    - For Setup Stores, updates `ref.value`.
+    - For Options Stores, directly assigns state (relying on Proxy for reactivity).
+    - Triggers the store's `changeSignal` to notify React components of the state change.
+  - Updated the `connection.subscribe` callback in `enableZestDevTools`:
+    - Listens for `DISPATCH` messages with `payload.type` of `JUMP_TO_STATE` or `JUMP_TO_ACTION`.
+    - Parses `message.state` (JSON string of global state) into an object.
+    - Calls `_internal_resetStoreState` for each relevant store in the snapshot.
+
+- **Task 2: Action Patching/Interception & State Snapshots**
+  - Modified `StoreRegistryEntry` type in `src/store/types.ts` to include `isSetupStore: boolean` and `initialStateKeys?: string[]`.
+  - Updated `defineZestStore` in `src/store/defineZestStore.ts`:
+    - To populate `isSetupStore` and `initialStateKeys` in the `StoreRegistryEntry` upon store creation.
+    - To call `_internal_initStoreState(id, serializableInitialState)` if DevTools are enabled.
+      - `_internal_initStoreState` sends a `@@ZEST_INIT/${storeId}` action and the global state snapshot to DevTools.
+    - To wrap functions for DevTools reporting:
+      - **Options Stores:** Original actions in `options.actions` are wrapped. The wrapper calls the original action, then (after promise resolution for async actions) calls `_internal_sendAction` with the store ID, action name, payload, and the (now unused) store instance.
+      - **Setup Stores:** Functions returned by the setup function are similarly wrapped. The wrapper calls the original function, then (after promise resolution) calls `_internal_sendAction`.
+      - `_internal_sendAction` formats the action (e.g., `storeId/actionName`) and sends it with the full current global state snapshot (obtained via `getGlobalZestStateSnapshot()`) to DevTools.
+
+- **Task 3: DevTools Configuration & Example App**
+  - Exported the internal `storeRegistry` (as `_internal_storeRegistry`) from the library's main entry point (`src/index.ts`) for application-level setup.
+  - Created `src/devtools/index.ts` to export public DevTools utilities (`enableZestDevTools`, etc.).
+  - Updated `zest-example-app/src/main.tsx` to:
+    - Import `enableZestDevTools` and `_internal_storeRegistry`.
+    - Call `enableZestDevTools(_internal_storeRegistry, { name: 'Zest Example App', trace: true })` conditionally in development mode (`import.meta.env.MODE === 'development'`).
+  - **Testing & Verification:**
+    - Confirmed successful connection to Redux DevTools browser extension.
+    - Verified initial state reporting for both Options and Setup stores.
+    - Verified action logging (e.g., `counterOptions/increment`, `counterSetup/increment`) and state updates for both store types.
+    - Confirmed Time Travel functionality (jumping to past states) correctly updates the example application's UI.
+  - Decided that explicit disabling of DevTools *within the library* for production builds is not strictly necessary, as conditional import/call by the user (as done in example app) is sufficient. The `typeof window === 'undefined'` check already prevents server-side execution of connection logic.

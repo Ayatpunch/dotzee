@@ -21,3 +21,12 @@ export { useZestStore } from './react';
 export { ref, isRef } from './reactivity/ref';
 export { reactive } from './reactivity/reactive';
 export { computed } from './reactivity/computed'; // Add when implemented
+
+export * from './reactivity';
+export * from './store';
+export * from './react';
+export * from './devtools'; // Export DevTools functions
+
+// Re-export the internal registry for app-level DevTools setup
+// It's marked internal but needed by the app
+export { _internal_storeRegistry } from './store/defineZestStore';

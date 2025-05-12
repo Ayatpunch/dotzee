@@ -176,33 +176,30 @@ This structure is a guideline and may be refined as development progresses and n
 
 1.  **Redux DevTools Connector:**
 
-    - [ ] Research Redux DevTools Extension API (`window.__REDUX_DEVTOOLS_EXTENSION__`).
-    - [ ] Implement a utility or a store plugin to connect to the DevTools.
-    - [ ] Send initial state to DevTools on store creation/connection.
-    - [ ] Send state snapshots and action information to DevTools:
-      - [ ] Capture action name and payload.
-      - [ ] Capture state before and after action (or just the diff).
-      - [ ] Format messages according to Redux DevTools expected action format (`{ type: \'storeId/actionName\', payload: ... }`).
-    - [ ] Handle DevTools messages (e.g., for time-travel).
+    - [x] Implement a utility (`src/devtools/connector.ts`) to connect to the DevTools (`enableZestDevTools`).
+        - [x] Send initial state to DevTools on store creation (`_internal_initStoreState` called from `defineZestStore`).
+        - [x] Send state snapshots and action information to DevTools for **Options Stores**:
+            - [x] Capture action name and basic payload.
+            - [x] Capture *global* state snapshot after action.
+            - [x] Format messages according to Redux DevTools expected action format (`{ type: 'storeId/actionName', payload: ... }`).
+        - [x] Send action/state updates for **Setup Stores** (by wrapping returned functions).
+    - [x] Wrap or augment actions (for Options Stores) to automatically dispatch information.
+    - [x] Wrap or augment functions returned by Setup Stores to automatically dispatch information.
+    - [x] Consider how to name actions in DevTools (`storeId/actionName` format used).
 
-2.  **Action Patching/Interception (for DevTools):**
+2.  **State Snapshots & Time Travel:**
 
-    - [ ] Wrap or augment actions to automatically dispatch information to DevTools before and after execution.
-    - [ ] Consider how to name actions in DevTools (e.g., `counter/increment`).
+    - [x] Implement logic to capture serializable *global* state snapshots (`getGlobalZestStateSnapshot`).
+    - [x] Implement logic to "jump" to a past state (Time Travel) (`_internal_resetStoreState` and subscriber logic).
+    - [x] Ensure DevTools can display the (global) state tree (basic implementation).
 
-3.  **State Snapshots & Time Travel:**
+3.  **DevTools Configuration:**
 
-    - [ ] Implement logic to capture serializable state snapshots.
-    - [ ] Implement logic to "jump" to a past state based on DevTools commands. This might involve re-setting the store\'s reactive proxy state. (This can be complex with direct mutation).
-    - [ ] Ensure DevTools can display the state tree.
+    - [x] Provide an easy way for users to enable DevTools integration (`enableZestDevTools(registry, options)`).
+    - [x] Allow disabling in production (by conditional import/call in user code).
 
-4.  **DevTools Configuration:**
-
-    - [ ] Provide an easy way for users to enable DevTools integration (e.g., a setup function or a plugin).
-    - [ ] Allow disabling in production.
-
-5.  **Example Application Updates:**
-    - [ ] Demonstrate DevTools integration in the example app.
+4.  **Example Application Updates:**
+    - [x] Demonstrate DevTools integration in the example app (Initial connection & Options Store actions verified).
 
 ## Phase 4: SSR, Modularity & Plugins
 

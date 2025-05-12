@@ -79,32 +79,33 @@ export type SetupStoreFunction<R extends SetupStoreReturnType = SetupStoreReturn
 // --- Generic Types --- //
 
 /**
- * Represents the user-facing store instance, which can be either an Options store
- * structure (State & Actions & Getters) or the return value of a Setup store function.
+ * Represents the possible structure of a store instance, used internally.
+ * This is a generic base type for the registry and other internal logic.
  */
-export type StoreInstanceType<
-    S extends object = any,
-    A extends StoreActions<S, G> = any,
-    G extends StoreGetters<S, G> = any,
-    R extends SetupStoreReturnType = any
-> = StoreInstance<S, A, G> | R;
+export type StoreInstanceType = Record<string, any>;
 
-/**
- * Internal representation of a store held in the registry.
- */
-export interface StoreRegistryEntry<T extends StoreInstanceType = any> {
-    hook: ZestStoreHook<T>;
-    instance: T;
-    changeSignal: Ref<number>;
-    id: string;
+// Defines the structure of the properties added to the hook function
+interface StoreHookProps {
+    $id: string;
+    $changeSignal: Ref<number>;
 }
 
 /**
  * Represents the hook function returned by defineZestStore,
  * providing access to the specific store instance type (Options or Setup).
+ * Includes attached properties like $id and $changeSignal.
  */
-export interface ZestStoreHook<T extends StoreInstanceType> {
-    (): T; // The function signature to get the instance
-    $id: string; // The unique ID of the store
-    $changeSignal: Ref<number>; // The ref used for reactivity signaling
+export type ZestStoreHook<T extends StoreInstanceType> = (() => T) & StoreHookProps;
+
+/**
+ * Represents an entry in the central store registry.
+ * @template T The specific type of the store instance this entry holds.
+ */
+export interface StoreRegistryEntry<T extends StoreInstanceType> {
+    hook: ZestStoreHook<T>; // The hook function to get the store instance
+    instance: T; // The actual store instance
+    changeSignal: Ref<number>; // The ref used to signal changes for this store
+    id: string; // The store's unique ID
+    isSetupStore: boolean; // True if defined with a setup function, false for options object
+    initialStateKeys?: string[]; // For options stores, the keys of the initial state object
 } 
