@@ -108,3 +108,16 @@
     - Options Store: `async` actions modifying state after `await`, triggering the change signal, and updating dependent getters.
     - Setup Store: `async` actions modifying `ref`s after `await` and triggering the change signal.
   - Confirmed that all added tests passed, verifying correct asynchronous action handling and reactivity.
+
+- **Task 3: Advanced TypeScript Typing**
+  - Discussed refining types for state (`S`), getters (`G`), and actions (`A`).
+  - Evaluated `this` context typing in Options stores:
+    - Confirmed `this` in actions (`S & MappedGetters<S, G> & A`) seems correct.
+    - Decided *not* to implement `this` access within getters, retaining the `(state: S)` signature for simplicity and explicitness.
+  - Discussed async action return type inference (`Promise<ResolvedType>`), concluding existing types should suffice.
+  - Agreed the primary goal was verification of current types rather than major rewriting.
+  - Added specific type-checking tests to `src/store/defineZestStore.test.ts`:
+    - Verified `this` context in Options Store actions (accessing state, getters, other actions).
+    - Verified inference of `async` action return types.
+    - Verified the `useZestStore` hook returns a fully typed store instance.
+  - Confirmed all type-checking tests passed, validating the current advanced typing approach.

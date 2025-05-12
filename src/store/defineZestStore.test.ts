@@ -584,4 +584,108 @@ describe('defineZestStore', () => {
             expect(store.doubled).toBe(10);
         });
     });
+
+    // --- Advanced TypeScript Typing Tests --- //
+    // Note: These tests primarily rely on TypeScript compilation success.
+    // Runtime assertions are minimal as the goal is static type verification.
+    describe('Advanced TypeScript Typing', () => {
+        it('Options Store: `this` should be correctly typed in actions', () => {
+            const storeId = 'typingOptionsThis';
+            const useTypingStore = defineZestStore(storeId, {
+                state: () => ({ count: 0, name: 'Test' }),
+                getters: {
+                    // Ensure G is inferred correctly
+                    isZero: (state) => state.count === 0,
+                    nameLength: (state) => state.name.length,
+                },
+                actions: {
+                    increment() {
+                        this.count++; // Access state
+                    },
+                    async complexAction(prefix: string): Promise<string> {
+                        this.increment(); // Access other action
+                        const isCurrentlyZero = this.isZero; // Access getter
+                        await delay(5);
+                        const finalName = `${prefix}-${this.name}:${this.nameLength}`;
+                        return finalName; // Return Promise<string>
+                    },
+                },
+            });
+
+            const store = useTypingStore();
+            // Minimal runtime check, primary validation is TS compilation
+            expect(useTypingStore.$id).toBe(storeId); // Check $id on the hook object
+
+            // Verify async action return type inference
+            const testAsyncReturnType = async () => {
+                const result: string = await store.complexAction('PREFIX');
+                expect(typeof result).toBe('string'); // Runtime check for return type
+            };
+            void testAsyncReturnType(); // Call async test function
+        });
+
+        it('Setup Store: Async action return type should be inferred correctly', () => {
+            const storeId = 'typingSetupAsync';
+            const useTypingStore = defineZestStore(storeId, () => {
+                const count = ref(0);
+                async function loadData(id: number): Promise<{ id: number; data: string }> {
+                    await delay(5);
+                    return { id, data: `Data for ${id}` };
+                }
+                return { count, loadData }; // R is inferred here
+            });
+
+            const store = useTypingStore();
+            expect(useTypingStore.$id).toBe(storeId);
+
+            // Verify async action return type inference
+            const testAsyncReturnType = async () => {
+                const result = await store.loadData(123);
+                // Check if result is assignable to the expected type
+                const expectedResult: { id: number; data: string } = result;
+                expect(expectedResult.id).toBe(123);
+                expect(expectedResult.data).toContain('123');
+            };
+            void testAsyncReturnType(); // Call async test function
+        });
+
+        it('useZestStore should return a fully typed store instance', () => {
+            // Define a store with known complex types
+            const useComplexStore = defineZestStore('complexTypeCheck', {
+                state: () => ({ user: { name: 'Alice', age: 30 }, items: ['a', 'b'] }),
+                getters: {
+                    userName: (state) => state.user.name,
+                    itemCount: (state) => state.items.length,
+                },
+                actions: {
+                    setAge(newAge: number) {
+                        this.user.age = newAge;
+                    },
+                },
+            });
+
+            // Use the main hook (which internally uses useSyncExternalStore)
+            // No need for actual React component context here, just checking types.
+            const store = useComplexStore(); // Direct call to the hook function
+
+            // Perform checks that rely on correct typing:
+
+            // State properties
+            const age: number = store.user.age;
+            const firstItem: string = store.items[0];
+
+            // Getters
+            const name: string = store.userName;
+            const count: number = store.itemCount;
+
+            // Actions (check parameter type and existence)
+            store.setAge(31);
+
+            // Minimal runtime assertion
+            expect(age).toBe(30);
+            expect(name).toBe('Alice');
+            expect(firstItem).toBe('a');
+            expect(count).toBe(2);
+        });
+    });
 }); 

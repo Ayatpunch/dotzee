@@ -154,14 +154,14 @@ This structure is a guideline and may be refined as development progresses and n
 
 3.  **Advanced TypeScript Typing:**
 
-    - [ ] Refine `defineZestStore` generics for:
-      - [ ] Inferring state type `S`.
-      - [ ] Inferring getters type `G` (and their return types).
-      - [ ] Inferring actions type `A` (including parameters and return types of async functions).
-    - [ ] Ensure `this` context in actions and getters is correctly typed to `S & G & A` (or `Readonly<S> & G` for getters if state is not directly mutable from getters).
-    - [ ] Ensure the `useStore()` hook returns a fully typed store instance.
-    - [ ] Aim for "zero-configuration" type safety for users.
-    - [ ] Explore mapped types, conditional types, and `infer` to achieve this.
+    - [x] Refine `defineZestStore` generics for:
+      - [x] Inferring state type `S`.
+      - [x] Inferring getters type `G` (and their return types).
+      - [x] Inferring actions type `A` (including parameters and return types of async functions).
+    - [x] Ensure `this` context in actions and getters is correctly typed to `S & G & A` (or `Readonly<S> & G` for getters if state is not directly mutable from getters) - Verified for actions; keeping getters as `(state: S)`.
+    - [x] Ensure the `useStore()` hook returns a fully typed store instance.
+    - [x] Aim for "zero-configuration" type safety for users.
+    - [x] Explore mapped types, conditional types, and `infer` to achieve this - Existing types verified as sufficient for now.
 
 4.  **Example Application Updates:**
     - [ ] Add examples demonstrating getters and async actions.
