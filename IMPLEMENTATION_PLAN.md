@@ -277,10 +277,6 @@ This structure is a guideline and may be refined as development progresses and n
       - [x] Basic logger plugin.
       - [x] Persistence plugin (e.g., sync to localStorage).
 
-4.  **Namespacing/IDs Refinement:**
-    - [ ] Solidify how store IDs are managed and ensure uniqueness (Documentation/Best Practices).
-    - [ ] Consider implications for DevTools and plugins.
-
 ## Phase 5: Polish, Testing, Documentation & Advanced Features
 
 **Goal:** Refine the library, ensure robustness through extensive testing, create comprehensive documentation, and consider advanced features.
@@ -291,13 +287,13 @@ This structure is a guideline and may be refined as development progresses and n
 
 1.  **Advanced Reactivity Considerations (if needed):**
 
-    - [ ] Investigate and implement memoization for getters if performance profiling indicates a need (e.g., using `proxy-memoize` concepts).
-    - [ ] Implement full, robust reactivity for `Map` and `Set` collections, including their specific methods (e.g., `map.set()`, `set.add()`, `map.get()`, `set.has()`, iteration, `size` property).\
-    - [ ] Enhance array reactivity to robustly handle all common mutation methods (e.g., `push`, `pop`, `shift`, `unshift`, `splice`, `sort`, `reverse`) ensuring notifications are triggered consistently and correctly for direct state and getters.
-    - [ ] Ensure robust handling of `Symbol` keys for all reactive operations, including their use in iteration and consideration for DevTools visibility if appropriate.
-    - [ ] Investigate and implement reactivity for `Date` objects if common use cases require it (e.g., ensuring mutations to Date objects trigger effects).
-    - [ ] Address reactivity for non-enumerable properties if specific use cases arise or for improved DevTools inspection.
-    - [ ] Handle other edge cases in reactivity if not fully covered by the above.
+    - [x] Investigate and implement memoization for getters if performance profiling indicates a need (e.g., using `proxy-memoize` concepts) - Current `computed` provides core memoization; advanced argument-based memoization deferred as optional.
+    - [x] Implement full, robust reactivity for `Map` and `Set` collections, including their specific methods (e.g., `map.set()`, `set.add()`, `map.get()`, `set.has()`, iteration, `size` property).
+    - [x] Enhance array reactivity to robustly handle all common mutation methods (e.g., `push`, `pop`, `shift`, `unshift`, `splice`, `sort`, `reverse`) ensuring notifications are triggered consistently and correctly for direct state and getters.
+    - [x] Ensure robust handling of `Symbol` keys for all reactive operations (core reactivity addressed using `Reflect.has`); DevTools visibility for Symbol-keyed state deferred.
+    - [x] Investigate and implement reactivity for `Date` objects if common use cases require it (e.g., ensuring mutations to Date objects trigger effects).
+    - [x] Address reactivity for non-enumerable properties if specific use cases arise or for improved DevTools inspection.
+    - [x] Handle other edge cases in reactivity if not fully covered by the above.
 
 2.  **API Review and Refinement:**
 
@@ -318,6 +314,7 @@ This structure is a guideline and may be refined as development progresses and n
     - [ ] **Core Concepts:** Reactivity, `defineZestStore`, state, getters, actions.
     - [ ] **API Reference:** Detailed documentation for all public functions and types.
     - [ ] **Advanced Guides:** SSR, DevTools, Plugins, TypeScript usage, best practices.
+    - [ ] **Store IDs and Namespacing:** Document best practices for choosing store IDs, how uniqueness is handled, and implications for DevTools, plugins, and code-splitting.
     - [ ] **Examples:** Multiple real-world (though simplified) examples.
     - [ ] **Comparison with other libraries** (similar to the design doc).
     - [ ] Set up a documentation website (e.g., using Docusaurus, VitePress).

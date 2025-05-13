@@ -62,20 +62,21 @@ export function getStoreStateSnapshotInternal(
 ): Record<string, any> {
     const snapshot: Record<string, any> = {};
     if (isSetupStore) {
-        for (const key in instance) {
-            if (Object.prototype.hasOwnProperty.call(instance, key)) {
-                const prop = instance[key];
+        // Use Reflect.ownKeys to get all own properties (string/symbol, enumerable/non-enumerable)
+        Reflect.ownKeys(instance).forEach(key => {
+            // Ensure key is a string or symbol that can be used as an object key for the snapshot
+            if (typeof key === 'string' || typeof key === 'symbol') {
+                const prop = instance[key as keyof StoreInstanceType]; // Use type assertion for safety
                 if (typeof prop !== 'function') {
-                    // Only include if it's a Ref (and not a ComputedRef) or a plain non-function value.
-                    if (isRef(prop) && !isComputed(prop)) { // It's a state Ref
-                        snapshot[key] = prop.value;
-                    } else if (!isRef(prop) && !isComputed(prop)) { // It's a plain value
-                        snapshot[key] = prop;
+                    if (isRef(prop) && !isComputed(prop)) {
+                        snapshot[key.toString()] = prop.value; // toString for symbol keys
+                    } else if (!isRef(prop) && !isComputed(prop)) {
+                        snapshot[key.toString()] = prop;
                     }
-                    // ComputedRefs (isComputed(prop) is true) are intentionally skipped
+                    // ComputedRefs are intentionally skipped
                 }
             }
-        }
+        });
     } else {
         // For options stores, only include keys that were part of the initial state.
         if (initialStateKeys) {
