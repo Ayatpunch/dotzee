@@ -248,23 +248,34 @@ This structure is a guideline and may be refined as development progresses and n
 
 2.  **Store Modularity & Lazy Loading:**
 
-    - [ ] Ensure stores register on first use automatically (current behavior seems sufficient).
-    - [ ] Verify seamless operation with code-splitting (dynamic imports in frameworks like Next.js/Vite).
+    - [x] Ensure stores register on first use automatically (current behavior is sufficient: `defineZestStore` registers in the active registry upon execution if the store ID is new).
+    - [x] Verify seamless operation with code-splitting (dynamic imports in frameworks like Next.js/Vite).
+        - Next.js example (`zest-next-example` with `LazyLoaderDisplay.tsx` and `FeatureComponent.tsx`/`featureStore.ts`) demonstrates that store definitions within dynamically imported chunks are registered correctly when the chunk loads. This shows compatibility.
     - [ ] Add specific examples/tests for lazy-loaded stores, ensuring correct hydration and DevTools interactions.
-    - [ ] (Optional) Explore explicit API for manual store registration/unregistration if needed.
+        - **Example:** `zest-next-example` provides a basic example of a lazy-loaded component using its own lazy-loaded store.
+        - **Hydration Gap & SSR for Lazy Stores:**
+            - The current global `hydrateZestState` is primarily for eagerly known stores.
+            - For lazy-loaded stores requiring initial state from the server, the recommended pattern (Option A) is:
+                1. Server fetches/determines the specific initial state for the lazy store.
+                2. This state is passed as props to the lazy-loaded component.
+                3. The lazy-loaded component, upon mounting, uses an action on its own store to initialize itself from these props. The store must expose such an initialization action.
+            - This pattern will be documented. A more integrated library solution (Option B - automatic pending hydration) is planned for Phase 5.
+        - **DevTools Interaction:** Verified. The lazy-loaded `featureStore` correctly appears in DevTools upon component load, its initial state is reported, actions (`setMessage`, `increment`) are logged, state updates are reflected, and time travel functions as expected.
+        - **Automated Tests:** Specific automated tests for these scenarios (lazy-loading, lazy hydration, lazy DevTools init) are pending (Phase 5).
+    - [x] (Optional) Explore explicit API for manual store registration/unregistration if needed (Deferred - current auto-registration seems sufficient).
 
 3.  **Plugin System:**
 
-    - [ ] Design a plugin API:
-      - [ ] Hooks into store lifecycle (e.g., `onStoreCreated`, `beforeAction`, `afterAction`).
-      - [ ] Ability for plugins to extend store instances (add properties/methods).
-      - [ ] Ability to subscribe to state changes globally or per store.
-      - [ ] Consider plugin context (access to registry, store instance, etc.).
-    - [ ] Implement the plugin registration mechanism (e.g., `zest.use(plugin)`).
-    - [ ] Implement the plugin execution logic within `defineZestStore` and action wrappers.
-    - [ ] Example Plugins:
-      - [ ] Basic logger plugin.
-      - [ ] Persistence plugin (e.g., sync to localStorage).
+    - [x] Design a plugin API:
+      - [x] Hooks into store lifecycle (e.g., `onStoreCreated`, `beforeAction`, `afterAction`).
+      - [x] Ability for plugins to extend store instances (add properties/methods).
+      - [x] Ability to subscribe to state changes globally or per store (partially addressed: plugins can access `changeSignal` via `storeEntry`).
+      - [x] Consider plugin context (access to registry, store instance, etc.) - `PluginContextApi` implemented.
+    - [x] Implement the plugin registration mechanism (e.g., `zest.use(plugin)` via `useZestPlugin`).
+    - [x] Implement the plugin execution logic within `defineZestStore` and action wrappers.
+    - [x] Example Plugins:
+      - [x] Basic logger plugin.
+      - [x] Persistence plugin (e.g., sync to localStorage).
 
 4.  **Namespacing/IDs Refinement:**
     - [ ] Solidify how store IDs are managed and ensure uniqueness (Documentation/Best Practices).
@@ -329,5 +340,6 @@ This structure is a guideline and may be refined as development progresses and n
     - [ ] Batching updates for performance.
     - [ ] More sophisticated DevTools features (e.g., custom panel).
     - [ ] Direct state mutation with patches (like Immer).
+    - [ ] **Enhanced SSR Hydration for Lazy-Loaded Stores (Option B):** Implement library-level support for `hydrateZestState` to automatically handle and apply pending hydration data for stores whose definitions are lazy-loaded after the initial global hydration call. This aims to simplify the developer experience compared to the manual prop-based initialization pattern (Option A from Phase 4).
 
 This plan provides a structured approach. We can check off tasks as they are completed.

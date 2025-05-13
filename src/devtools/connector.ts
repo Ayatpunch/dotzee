@@ -1,4 +1,5 @@
 import { isRef } from '../reactivity/ref';
+import { isComputed } from '../reactivity/computed';
 import type { StoreRegistryEntry, StoreInstanceType } from '../store/types';
 // Import registry functions and type
 import { ZestRegistry, getActiveZestRegistry, getGlobalZestRegistry } from '../store/registry';
@@ -11,6 +12,7 @@ interface DevToolsExtension {
 interface DevToolsOptions {
     name?: string;
     trace?: boolean;
+    traceLimit?: number;
     // other options as per Redux DevTools Extension API
 }
 
@@ -44,45 +46,70 @@ export function isZestDevToolsEnabled(): boolean {
 }
 
 /**
- * Creates a serializable snapshot of the current state of all stores in the provided registry.
- * For Setup Stores, it unwraps refs and excludes functions.
- * For Options Stores, it uses `initialStateKeys` to extract only state properties.
- * @param registry The ZestRegistry instance to snapshot.
- * @returns A serializable object representing the global Zest state.
  * @internal
+ * Creates a serializable snapshot of a single store instance.
+ * This function is used by both DevTools integration and potentially by plugins.
+ *
+ * @param instance - The store instance to snapshot.
+ * @param isSetupStore - Boolean indicating if it's a setup store.
+ * @param initialStateKeys - Optional array of initial state keys (for options stores).
+ * @returns A serializable object representing the store's state.
+ */
+export function getStoreStateSnapshotInternal(
+    instance: StoreInstanceType,
+    isSetupStore: boolean,
+    initialStateKeys?: string[]
+): Record<string, any> {
+    const snapshot: Record<string, any> = {};
+    if (isSetupStore) {
+        for (const key in instance) {
+            if (Object.prototype.hasOwnProperty.call(instance, key)) {
+                const prop = instance[key];
+                if (typeof prop !== 'function') {
+                    // Only include if it's a Ref (and not a ComputedRef) or a plain non-function value.
+                    if (isRef(prop) && !isComputed(prop)) { // It's a state Ref
+                        snapshot[key] = prop.value;
+                    } else if (!isRef(prop) && !isComputed(prop)) { // It's a plain value
+                        snapshot[key] = prop;
+                    }
+                    // ComputedRefs (isComputed(prop) is true) are intentionally skipped
+                }
+            }
+        }
+    } else {
+        // For options stores, only include keys that were part of the initial state.
+        if (initialStateKeys) {
+            initialStateKeys.forEach(key => {
+                if (Object.prototype.hasOwnProperty.call(instance, key)) {
+                    snapshot[key] = instance[key];
+                }
+            });
+        } else {
+            console.warn(`[Zest DevTools] Missing initialStateKeys for options store instance. Snapshot may be incomplete or include non-state properties.`);
+        }
+    }
+    return snapshot;
+}
+
+/**
+ * Retrieves a snapshot of the current state of all registered Zest stores
+ * from the provided registry.
+ * @param registry - The ZestRegistry instance to snapshot.
+ * @returns An object where keys are store IDs and values are their states.
  */
 export function getGlobalZestStateSnapshot(registry: ZestRegistry): Record<string, any> {
     const globalState: Record<string, any> = {};
     if (!registry) {
-        console.warn('[Zest DevTools] Cannot create snapshot: Registry is not available.');
+        console.warn('[Zest DevTools] Cannot get global state snapshot, registry is not available.');
         return globalState;
     }
-
     registry.forEach((entry, storeId) => {
-        const storeState: Record<string, any> = {};
-        if (entry.isSetupStore) {
-            // For setup stores, iterate over the instance properties
-            for (const key in entry.instance) {
-                if (Object.prototype.hasOwnProperty.call(entry.instance, key)) {
-                    const prop = entry.instance[key];
-                    if (typeof prop !== 'function') { // Exclude functions
-                        storeState[key] = isRef(prop) ? prop.value : prop;
-                    }
-                }
-            }
-        } else {
-            // For options stores, use initialStateKeys to get only state props
-            if (entry.initialStateKeys) {
-                entry.initialStateKeys.forEach(key => {
-                    storeState[key] = (entry.instance as any)[key];
-                });
-            } else {
-                // Fallback if initialStateKeys is not defined (should not happen for Options stores)
-                // This part might need careful review if options stores can exist without initialStateKeys
-                Object.assign(storeState, (entry.instance as any));
-            }
-        }
-        globalState[storeId] = storeState;
+        // Use the new internal snapshot function for each store
+        globalState[storeId] = getStoreStateSnapshotInternal(
+            entry.instance,
+            entry.isSetupStore,
+            entry.initialStateKeys
+        );
     });
     return globalState;
 }
@@ -188,56 +215,59 @@ export function disconnectZestDevTools(): void {
 }
 
 /**
- * Sends the initial state of a specific store to DevTools.
- * Called from defineZestStore when a store is initialized.
- * @param storeId The ID of the store.
- * @param initialState The serializable initial state of the store.
- * @param registryForSnapshot The ZestRegistry to use for generating the full global state snapshot.
  * @internal
- */
-export function _internal_initStoreState(storeId: string, initialState: any, registryForSnapshot: ZestRegistry): void {
-    if (!connection) return;
-
-    const actionType = `${ZEST_DEVTOOLS_INIT_ACTION_PREFIX}/${storeId}`;
-    const globalStateSnapshot = getGlobalZestStateSnapshot(registryForSnapshot);
-
-    // It seems devtools.init might be better here for each store, but Pinia uses send.
-    // For now, we send an action. We might need to adjust how DevTools expects initial states from multiple sources.
-    // The current approach sends the *full global state* with each store's init action.
-    connection.send({ type: actionType, payload: initialState /* or simply storeId? */ }, globalStateSnapshot);
-    // console.log(`[Zest DevTools - ${storeId}] Sent initial state:`, initialState, `Global Snapshot:`, globalStateSnapshot);
-}
-
-/**
- * Sends an action and the current global state to DevTools.
- * Called from the wrappers in defineZestStore after an action is executed.
- * @param storeId The ID of the store where the action occurred.
- * @param actionName The name of the action.
- * @param payload The payload of the action (if any).
- * @param storeInstance (Currently unused, but was part of the signature - can be removed if not needed for future formatting)
- * @internal
+ * Sends an action and the current global state snapshot to Redux DevTools.
+ * Assumes connection is active and registry is set.
  */
 export function _internal_sendAction(
     storeId: string,
     actionName: string,
-    payload: any,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    storeInstance?: StoreInstanceType // Keep for now, might be useful for payload formatting later
+    payload: any, // Payload can be anything, devtools will display it
+    // storeInstance: StoreInstanceType, // No longer needed directly here
+    currentRegistry: ZestRegistry // Pass the active/relevant registry
 ): void {
-    if (!connection) return;
+    if (!connection || !currentRegistry) return;
 
     const actionType = `${storeId}/${actionName}`;
-    // Get snapshot of the currently active registry's state
-    const globalStateSnapshot = getGlobalZestStateSnapshot(getActiveZestRegistry());
+    // console.log(`[Zest DevTools - ${storeId}] Sending action: ${actionType}`, payload);
 
-    const actionPayload = {
-        // Consider more detailed payload formatting here if needed
-        // For example, array of args, or just the first arg if simple
-        payload: payload,
-    };
+    // Get the complete current state of *all* stores in the provided registry
+    const globalSnapshot = getGlobalZestStateSnapshot(currentRegistry);
 
-    connection.send({ type: actionType, ...actionPayload }, globalStateSnapshot);
-    if (devToolsOptions?.trace) {
-        console.log(`[Zest DevTools TRACE - ${actionType}]`, payload, 'Global Snapshot:', globalStateSnapshot);
-    }
+    connection.send(
+        {
+            type: actionType,
+            payload: payload !== undefined ? payload : null, // Ensure payload is not undefined
+            ...(devToolsOptions?.trace && { stack: new Error().stack }), // Basic stack trace
+        },
+        globalSnapshot // Send the full state of the registry
+    );
+}
+
+/**
+ * @internal
+ * Initializes a store's state with Redux DevTools.
+ * Sends a special INIT action for the store along with the global state.
+ */
+export function _internal_initStoreState(
+    storeId: string,
+    // initialStoreState: Record<string, any>, // This is now the snapshot from getStoreStateSnapshotInternal
+    storeSnapshot: Record<string, any>, // Snapshot of the specific store being initialized
+    registry: ZestRegistry
+): void {
+    if (!connection || !registry) return;
+
+    // console.log(`[Zest DevTools - ${storeId}] Initializing store state with DevTools.`);
+    // When a store initializes, we send its specific initial state as the "action payload"
+    // and the entire global state of the *current* registry as the state tree.
+    const globalSnapshot = getGlobalZestStateSnapshot(registry);
+
+    connection.send(
+        {
+            type: `@@ZEST_INIT/${storeId}`,
+            payload: storeSnapshot, // Send the specific store's initial snapshot as payload
+            source: '@zest-state-library',
+        },
+        globalSnapshot // Send the full current global state
+    );
 }

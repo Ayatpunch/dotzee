@@ -167,7 +167,7 @@
   - Modified `StoreRegistryEntry` type in `src/store/types.ts` to include `isSetupStore: boolean` and `initialStateKeys?: string[]`.
   - Updated `defineZestStore` in `src/store/defineZestStore.ts`:
     - To populate `isSetupStore` and `initialStateKeys` in the `StoreRegistryEntry` upon store creation.
-    - To call `_internal_initStoreState(id, serializableInitialState)` if DevTools are enabled.
+    - To call `_internal_initStoreState` if DevTools are enabled.
       - `_internal_initStoreState` sends a `@@ZEST_INIT/${storeId}` action and the global state snapshot to DevTools.
     - To wrap functions for DevTools reporting:
       - **Options Stores:** Original actions in `options.actions` are wrapped. The wrapper calls the original action, then (after promise resolution for async actions) calls `_internal_sendAction` with the store ID, action name, payload, and the (now unused) store instance.
@@ -255,3 +255,71 @@
       **Solution:** Downgraded from Tailwind CSS v4 to v3, which fully supports the alpha transparency notation in both light and dark modes. This resolved all styling inconsistencies in the example application.
 
       **Impact:** The example application now correctly showcases the library with proper styling in both light and dark modes, with all badge components displaying the intended alpha transparency effects.
+
+- **Task 2: Store Modularity & Lazy Loading**
+  - **Automatic Registration:** Confirmed that stores register on first use automatically due to `defineZestStore` checking the active registry and creating the store if the ID is new. Marked as complete.
+  - **Code-Splitting Compatibility:** Verified seamless operation with code-splitting using the `zest-next-example`. The `FeatureComponent` (lazy-loaded) successfully uses `useFeatureStore` (defined in `featureStore.ts`, also effectively lazy-loaded). The library's design allows store definitions to reside in dynamically imported chunks and register correctly upon load. Marked as complete.
+  - **Examples for Lazy-Loaded Stores:** The `zest-next-example` (with `FeatureComponent` and `featureStore`) serves as a concrete example.
+  - **DevTools Interaction for Lazy Stores:** Manually verified that the lazy-loaded `featureStore` in `zest-next-example` correctly integrates with DevTools:
+    - Appears in DevTools upon component load.
+    - Initial state is correctly reported.
+    - Actions (`setMessage`, `increment`) are logged with correct state updates.
+    - Time travel functions as expected.
+  - **SSR Hydration for Lazy-Loaded Stores with Server State (Hydration Gap):**
+    - Identified a gap: The current global `hydrateZestState` pattern is for eagerly known stores. It doesn't inherently cover hydrating a lazy-loaded store that needs initial state from the server.
+    - **Option A (Current Documented Pattern):** Agreed to document a pattern where:
+        1. Server fetches/determines the specific initial state for the lazy store.
+        2. This state is passed as props to the lazy-loaded component.
+        3. The lazy-loaded component, upon mounting, uses a dedicated action on its own store to initialize itself from these props. The store definition must include such an action.
+    - **Option B (Future Enhancement):** Planned for Phase 5 to implement a more integrated library solution (`Enhanced SSR Hydration for Lazy-Loaded Stores`) where `hydrateZestState` could handle pending hydration data for stores defined later.
+  - **Automated Tests:** Specific automated tests for lazy-loading scenarios (hydration, DevTools) are deferred to Phase 5.
+  - **Manual Store Registration/Unregistration API:** Confirmed as optional and deferred, as the current auto-registration is sufficient.
+
+- **Task 3: Plugin System (Design Discussion)**
+  - **Goal:** To create an extensible plugin system allowing users to hook into store lifecycles and actions.
+  - **Core Concepts:**
+    - **`Plugin` Interface:**
+      ```typescript
+      interface Plugin {
+          name: string; // For identification and debugging
+          install: (context: PluginContextApi) => void;
+      }
+      ```
+    - **`PluginContextApi` (Provided to `plugin.install`)**:
+      ```typescript
+      interface PluginContextApi {
+          onStoreCreated: (callback: (context: StoreCreatedContext) => void) => void;
+          beforeAction: (callback: (context: ActionContext) => void) => void; // Args are read-only
+          afterAction: (callback: (context: AfterActionContext) => void) => void;
+          extendStore: <T extends StoreInstanceType, E extends Record<string, any>>(storeInstance: T, extension: E) => void; // Powerful, use with caution
+          getStoreStateSnapshot: (storeInstance: StoreInstanceType) => Record<string, any>; // Uses new internal utility
+      }
+      ```
+    - **Context Objects for Callbacks:**
+        - `StoreCreatedContext`: `{ storeEntry: StoreRegistryEntry<StoreInstanceType> }`
+        - `ActionContext`: `{ storeEntry: StoreRegistryEntry<StoreInstanceType>; actionName: string; args: readonly any[] }`
+        - `AfterActionContext`: `{ storeEntry: StoreRegistryEntry<StoreInstanceType>; actionName: string; args: readonly any[]; result?: any; error?: any }`
+  - **Plugin Registration:**
+    - An internal `zestPlugins: Plugin[]` array.
+    - A public `useZestPlugin(plugin: Plugin)` function:
+        - Adds the plugin to the `zestPlugins` array.
+        - Immediately calls `plugin.install(pluginContextApi)` where `pluginContextApi` is a single, shared, read-only object containing methods to register callbacks.
+  - **Internal Notification Functions (e.g., `_notifyStoreCreated`)**:
+    - These functions will iterate over the registered plugin callbacks (`onStoreCreatedCallbacks`, `beforeActionCallbacks`, etc.) and execute them, wrapped in `try...catch` blocks to isolate plugin errors.
+  - **Integration into `defineZestStore`:**
+    - **`_notifyStoreCreated(registryEntry)`:** Called after the base `storeInstance` and `registryEntry` are created. This allows plugins to `extendStore` before the store is fully registered or seen by DevTools.
+    - **DevTools Initial State:** `_internal_initStoreState` will be called *after* `_notifyStoreCreated`. It will use a new utility `getStoreStateSnapshotInternal(registryEntry.instance, ...)` to capture the snapshot, ensuring that any stateful properties added by plugins during `onStoreCreated` are included in the initial DevTools view.
+  - **Integration into Action Wrappers (in `defineZestStore`):**
+    - The sequence for wrapped actions will be:
+        1. `_notifyBeforeAction(context)`
+        2. Original action execution (with `try...catch` and `await` for async).
+        3. `_notifyAfterAction(context)` (passing result or error).
+        4. DevTools `_internal_sendAction(...)` (capturing state *after* plugin hooks).
+        5. Re-throw error if one occurred during the original action.
+  - **New Utility: `getStoreStateSnapshotInternal`:**
+    - `getStoreStateSnapshotInternal(instance: StoreInstanceType, isSetupStore: boolean, initialStateKeys?: string[]): Record<string, any>`
+    - This utility centralizes logic for creating a serializable snapshot of a store instance, correctly unwrapping refs for setup stores and using `initialStateKeys` to filter state for options stores. It will be used by `PluginContextApi.getStoreStateSnapshot` and for preparing snapshots for DevTools.
+  - **`extendStore` Considerations:**
+    - Acknowledged as powerful but potentially risky. Users would need TypeScript augmentation for full type safety of extensions.
+    - Should primarily be used within `onStoreCreated`.
+  - **Next Steps for Plugin System:** Proceed with implementing the defined API, registration mechanism, notification functions, and integrating them into `defineZestStore` and action wrappers. Then, create example plugins (logger, persistence).

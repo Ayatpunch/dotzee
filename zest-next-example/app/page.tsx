@@ -1,28 +1,8 @@
-// REMOVE ALL zest-state-library imports
-// import {
-//   createZestRegistry,
-//   setActiveZestRegistry,
-//   resetActiveZestRegistry,
-// } from 'zest-state-library';
-// import type { ZestRegistry } from 'zest-state-library';
-
-// import dynamic from 'next/dynamic'; // REMOVED
 import ClientContainer from '../components/ClientContainer'; // IMPORT new container
 // import ClientPage from '../components/ClientPage'; // REMOVED - now imported by ClientContainer
 import LazyLoaderDisplay from '../components/LazyLoaderDisplay';
 
-// Dynamically import ClientPage with SSR turned off - REMOVED from here
-// const ClientPage = dynamic(() => import('../components/ClientPage'), { // REMOVED
-//   ssr: false, // REMOVED
-//   // Optional: Add a loading component // REMOVED
-//   // loading: () => <p>Loading counter...</p>, // REMOVED
-// }); // REMOVED
-
 export default function Page() {
-  // REMOVE registry-related code
-  // const requestRegistry: ZestRegistry = createZestRegistry();
-  // setActiveZestRegistry(requestRegistry);
-
   // Simply hardcode the initial state without any Zest dependencies
   const initialZestState = {
     'counterOptions': {

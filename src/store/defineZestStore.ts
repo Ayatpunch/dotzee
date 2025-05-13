@@ -2,9 +2,16 @@ import { reactive } from '../reactivity/reactive';
 import { ref, setActiveStoreTrigger, clearActiveStoreTrigger, Ref, isRef } from '../reactivity/ref';
 import { computed } from '../reactivity/computed';
 // Import DevTools connector functions and state
-import { _internal_initStoreState, isZestDevToolsEnabled, _internal_sendAction } from '../devtools/connector';
+import {
+    _internal_initStoreState,
+    isZestDevToolsEnabled,
+    _internal_sendAction,
+    getStoreStateSnapshotInternal // Import the new snapshot utility
+} from '../devtools/connector';
 // Import registry functions
-import { getActiveZestRegistry, getGlobalZestRegistry } from './registry'; // Import the getters
+import { getActiveZestRegistry, getGlobalZestRegistry } from './registry';
+// Import Plugin notification functions
+import { _notifyStoreCreated, _notifyBeforeAction, _notifyAfterAction } from '../plugins/manager';
 
 import type {
     DefineZestStoreOptions,
@@ -17,8 +24,9 @@ import type {
     StoreRegistryEntry,
     ZestStoreHook,
     MappedGetters,
-    ZestRegistry // Import type if needed
+    ZestRegistry
 } from './types';
+import type { ActionContext, AfterActionContext } from '../plugins/types'; // For plugin contexts
 
 // Registry uses the generic StoreRegistryEntry
 // const storeRegistry = new Map<string, StoreRegistryEntry<StoreInstanceType>>(); // REMOVED: No longer using local registry const
@@ -84,6 +92,9 @@ export function defineZestStore<
     let isSetupStore = typeof optionsOrSetup === 'function';
     let initialStateKeys: string[] | undefined = undefined; // Initialize for options store state keys
 
+    // This will be populated before being used by action wrappers
+    let tempRegistryEntryForActionWrappers: StoreRegistryEntry<StoreInstanceType>;
+
     if (isSetupStore) {
         // --- Setup Store Logic --- //
         const setupFunction = optionsOrSetup as SetupStoreFunction<R>;
@@ -106,24 +117,35 @@ export function defineZestStore<
                 if (typeof originalProp === 'function') {
                     // Wrap the function (potential action)
                     (wrappedInstance as any)[key] = async function (...args: any[]) {
-                        // Note: `this` context inside setup functions isn't typically the store instance itself
-                        // We call the original function without binding `this` to the wrappedInstance
-                        const result = originalProp(...args);
+                        const actionCtx: ActionContext = {
+                            storeEntry: tempRegistryEntryForActionWrappers!, // Assert non-null: will be set before actions are callable
+                            actionName: key,
+                            args: args
+                        };
+                        _notifyBeforeAction(actionCtx);
+
+                        let result: any;
+                        let error: any;
+                        try {
+                            result = originalProp(...args);
+                            if (result instanceof Promise) {
+                                result = await result;
+                            }
+                        } catch (e) {
+                            error = e;
+                        }
+
+                        const afterActionCtx: AfterActionContext = {
+                            ...actionCtx,
+                            result,
+                            error
+                        };
+                        _notifyAfterAction(afterActionCtx);
 
                         if (isZestDevToolsEnabled()) {
-                            let actionPayload = args.length > 0 ? args[0] : undefined;
-                            if (result instanceof Promise) {
-                                try {
-                                    await result;
-                                } catch (e) {
-                                    console.warn(`[Zest DevTools - ${id}] Action "${key}" (async setup fn) rejected.`, e);
-                                    _internal_sendAction(id, key, actionPayload, wrappedInstance); // Send state *after* error
-                                    throw e; // Re-throw
-                                }
-                            }
-                            // Send action after sync/async completion
-                            _internal_sendAction(id, key, actionPayload, wrappedInstance);
+                            _internal_sendAction(id, key, args.length > 0 ? args[0] : undefined, currentRegistry);
                         }
+                        if (error) throw error; // Re-throw after notifications
                         return result;
                     };
                 } else {
@@ -171,25 +193,35 @@ export function defineZestStore<
                     const actionFn = options.actions[key];
                     // Wrap the action to send to DevTools if enabled
                     (instance as any)[key] = async function (...args: any[]) { // Make wrapper async to handle promises
-                        const result = actionFn.apply(instance, args);
+                        const actionCtx: ActionContext = {
+                            storeEntry: tempRegistryEntryForActionWrappers!, // Assert non-null
+                            actionName: key,
+                            args: args
+                        };
+                        _notifyBeforeAction(actionCtx);
+
+                        let result: any;
+                        let error: any;
+                        try {
+                            result = actionFn.apply(instance, args);
+                            if (result instanceof Promise) {
+                                result = await result;
+                            }
+                        } catch (e) {
+                            error = e;
+                        }
+
+                        const afterActionCtx: AfterActionContext = {
+                            ...actionCtx,
+                            result,
+                            error
+                        };
+                        _notifyAfterAction(afterActionCtx);
 
                         if (isZestDevToolsEnabled()) {
-                            let actionPayload = args.length > 0 ? args[0] : undefined;
-                            // If the action returns a promise, wait for it to resolve
-                            if (result instanceof Promise) {
-                                try {
-                                    await result;
-                                } catch (e) {
-                                    // Don't prevent error from propagating, but still log action
-                                    console.warn(`[Zest DevTools - ${id}] Action "${key}" (async) rejected.`, e);
-                                    // We still send the action, the state after will reflect the pre-error state or partially updated state.
-                                    _internal_sendAction(id, key, actionPayload, storeInstance);
-                                    throw e; // Re-throw the error
-                                }
-                            }
-                            // Send action after it has completed (and potentially mutated state)
-                            _internal_sendAction(id, key, actionPayload, storeInstance);
+                            _internal_sendAction(id, key, args.length > 0 ? args[0] : undefined, currentRegistry);
                         }
+                        if (error) throw error; // Re-throw after notifications
                         return result; // Return the original result (e.g., promise or value)
                     };
                 }
@@ -217,41 +249,25 @@ export function defineZestStore<
         initialStateKeys: initialStateKeys // <-- Set the keys (undefined for setup stores)
     };
 
+    // Assign to the temporary variable for action wrappers to use
+    tempRegistryEntryForActionWrappers = registryEntry;
+
     // 5. Store the new entry - Use the active registry
     currentRegistry.set(id, registryEntry);
 
     // 5.1 If DevTools are enabled, send initial state
     if (isZestDevToolsEnabled()) {
-        // We need a non-proxied, serializable version of the state.
-        // For options stores, storeInstance is already the reactive proxy of initialState.
-        // For setup stores, storeInstance is the returned object (which might contain refs, plain values, functions).
-        // DevTools usually expects plain JS objects.
-
-        let serializableState: any;
-        if (isSetupStore) {
-            // For setup stores, iterate over the returned properties
-            // and unwrap any refs. Functions should probably be omitted.
-            serializableState = {};
-            for (const key in storeInstance) {
-                if (Object.prototype.hasOwnProperty.call(storeInstance, key)) {
-                    const prop = (storeInstance as any)[key];
-                    if (typeof prop !== 'function') {
-                        serializableState[key] = isRef(prop) ? prop.value : prop;
-                    }
-                }
-            }
-        } else {
-            // For options stores, the storeInstance IS the state (plus methods/getters).
-            // We need to extract the original state parts, excluding methods and getters.
-            // The `initialState` variable below might not exist here if we refactor.
-            // The original options.state() gives the raw initial data.
-            serializableState = (optionsOrSetup as DefineZestStoreOptions<S, A, G>).state();
-        }
-        // TODO: Update _internal_initStoreState to accept the registry
-        // _internal_initStoreState(id, serializableState); // Pass currentRegistry here eventually
-        // Pass the current registry to the init function
-        _internal_initStoreState(id, serializableState, currentRegistry);
+        // Use getStoreStateSnapshotInternal for a complete initial snapshot including plugin modifications
+        const initialSnapshotForDevTools = getStoreStateSnapshotInternal(
+            registryEntry.instance, // Instance might have been extended by plugins
+            registryEntry.isSetupStore,
+            registryEntry.initialStateKeys
+        );
+        _internal_initStoreState(id, initialSnapshotForDevTools, currentRegistry);
     }
+
+    // Notify plugins about store creation (plugins can extend the instance here)
+    _notifyStoreCreated({ storeEntry: registryEntry });
 
     // 6. Return the newly created hook function (now correctly typed thanks to overloads and internal casting)
     return newHook;
