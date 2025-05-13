@@ -233,4 +233,25 @@
     - Debugged and fixed an error where `getGlobalZestRegistry` wasn't exported correctly by adjusting exports in `src/store/index.ts` and rebuilding the library.
     - Implicitly confirmed the correct pattern avoids calling React hooks like `useZestStore` in Server Components, resolving potential `useSyncExternalStore` errors in that context.
     - Successfully verified the SSR flow: state rendered on the server, hydrated on the client without flicker, and subsequent interactions were reactive. DevTools integration also worked correctly after hydration.
-    - Marked Phase 4, Task 1 (SSR Support) as complete in `IMPLEMENTATION_PLAN.md`.
+    - Marked Phase 4, Task 1 (SSR Support) as complete in `IMPLEMENTATION_PLAN.md`
+
+      We've successfully implemented and confirmed SSR functionality with Next.js App Router, following the recommended pattern:
+
+      1. In Server Components:
+        - Create a new registry for each request
+        - Access stores directly from the registry
+        - Serialize state and pass to Client Components
+
+      2. In Client Components:
+        - Receive serialized state as props
+        - Hydrate on mount using `useEffect`
+        - Use standard Zest hooks for reactivity
+
+      This approach correctly separates server and client responsibilities, avoids calling React hooks in Server Components, and ensures a smooth hydration process. The implementation in the `zest-next-example` project serves as a solid reference implementation.
+
+
+      While implementing the Next.js example application, we encountered styling issues with Tailwind CSS v4. The dark mode alpha transparency notations (like `dark:bg-purple-900/30`) weren't rendering correctly.
+
+      **Solution:** Downgraded from Tailwind CSS v4 to v3, which fully supports the alpha transparency notation in both light and dark modes. This resolved all styling inconsistencies in the example application.
+
+      **Impact:** The example application now correctly showcases the library with proper styling in both light and dark modes, with all badge components displaying the intended alpha transparency effects.

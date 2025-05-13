@@ -35,25 +35,24 @@ export function useZestStore<T extends StoreInstanceType>(storeHook: ZestStoreHo
         };
     };
 
-    // 3. Define the getSnapshot function
-    //    This function should return the current state/value that the component depends on.
-    //    Returning the entire store instance works for now.
-    //    React uses Object.is comparison on snapshots, so returning the same instance
-    //    when the signal fires but the relevant state hasn't changed is important.
-    // ---> UPDATE: Returning the instance itself can cause React to bail out of updates
-    // ---> if the instance reference hasn't changed. Return the signal value instead
-    // ---> to force React to acknowledge the change.
+    // 3. Define the getSnapshot function (for client-side updates)
     const getSnapshot = (): number => {
-        // console.log(`[Zest - ${storeId}] Getting snapshot (signal value).`);
+        // console.log(`[Zest - ${storeId}] Getting client snapshot (signal value).`);
         // Return the current value of the change signal
         return changeSignalRef.value;
     };
 
-    // 4. Use the hook
-    //    Even though the snapshot is just the signal's value, useSyncExternalStore
-    //    will trigger a re-render. The component then gets the up-to-date store
-    //    instance via the `getStoreInstance()` call inside the hook body.
-    useSyncExternalStore(subscribeFn, getSnapshot); // Use the hook to subscribe
+    // 3.5 Define the getServerSnapshot function (for initial server render)
+    //     This needs to return the initial state consistent with the server render.
+    //     Since our client getSnapshot relies on the signal value, we return the
+    //     initial signal value here as well for consistency.
+    const getServerSnapshot = (): number => {
+        // console.log(`[Zest - ${storeId}] Getting server snapshot (initial signal value).`);
+        return changeSignalRef.value; // Return the initial value (likely 0)
+    };
+
+    // 4. Use the hook, now providing getServerSnapshot
+    useSyncExternalStore(subscribeFn, getSnapshot, getServerSnapshot); // Use the hook to subscribe
 
     // console.log(`[Zest - ${storeId}] Component rendering with store instance.`);
     // Return the actual store instance for the component to use
