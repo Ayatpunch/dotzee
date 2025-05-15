@@ -210,7 +210,7 @@ function App() {
             <p className="text-lg text-gray-700 dark:text-gray-300 mb-6">
               Whether you prefer a more structured options-based API or a flexible composition-style approach, Dotzee accommodates both with full TypeScript support.
             </p>
-            <Link to="/concepts" className="inline-flex items-center text-purple-600 hover:text-purple-700 font-medium">
+            <Link to="/core-concepts" className="inline-flex items-center text-purple-600 hover:text-purple-700 font-medium">
               Learn more about the concepts
               <svg className="ml-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
@@ -405,7 +405,7 @@ function App() {
             <Link to="/getting-started" className="inline-flex items-center justify-center px-8 py-4 border border-transparent text-base font-medium rounded-lg text-purple-700 bg-white hover:bg-indigo-50 transition-colors duration-200">
               Get Started
             </Link>
-            <Link to="/concepts" className="inline-flex items-center justify-center px-8 py-4 text-base font-medium rounded-lg text-white border border-white/30 hover:bg-white/10 transition-colors duration-200">
+            <Link to="/core-concepts" className="inline-flex items-center justify-center px-8 py-4 text-base font-medium rounded-lg text-white border border-white/30 hover:bg-white/10 transition-colors duration-200">
               Learn Concepts
             </Link>
           </div>
