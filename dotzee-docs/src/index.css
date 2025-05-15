@@ -1,0 +1,139 @@
+@import 'tailwindcss';
+
+/* Custom styles */
+:root {
+  --color-primary: #6d28d9;
+  --color-primary-light: #8b5cf6;
+  --color-primary-dark: #5b21b6;
+}
+
+body {
+  font-family:
+    'Inter',
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Reset margins for the prose content */
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4 {
+  margin-top: 1.5em;
+  margin-bottom: 0.75em;
+}
+
+.prose h1 {
+  @apply text-3xl font-bold text-gray-900 dark:text-white mb-4 mt-2;
+}
+
+.prose h2 {
+  @apply text-2xl font-semibold text-gray-800 dark:text-gray-100 mb-4 mt-8;
+}
+
+.prose h3 {
+  @apply text-xl font-medium text-gray-800 dark:text-gray-100 mb-3 mt-6;
+}
+
+.prose p {
+  @apply text-gray-700 dark:text-gray-300 mb-4 leading-relaxed;
+}
+
+.prose ul,
+.prose ol {
+  @apply pl-6 mb-6;
+}
+
+.prose li {
+  @apply mb-2;
+}
+
+.prose code:not(pre code) {
+  @apply px-1.5 py-0.5 rounded text-sm bg-gray-100 dark:bg-gray-800 text-purple-600 dark:text-purple-400 font-mono;
+}
+
+.prose a {
+  @apply text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 font-medium transition-colors duration-150;
+}
+
+.prose blockquote {
+  @apply pl-4 border-l-4 border-purple-200 dark:border-purple-900 italic text-gray-700 dark:text-gray-300;
+}
+
+.prose pre {
+  @apply mb-4 p-0 overflow-x-auto;
+}
+
+.code-block {
+  @apply mb-6 rounded-md overflow-hidden;
+}
+
+/* Documentation components */
+.doc-card {
+  @apply p-6 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow duration-200;
+}
+
+.doc-section {
+  @apply mb-12;
+}
+
+/* API Reference styles */
+.api-method {
+  @apply border border-gray-200 dark:border-gray-800 rounded-md mb-8 overflow-hidden;
+}
+
+.api-method-header {
+  @apply bg-gray-50 dark:bg-gray-800 px-4 py-3 border-b border-gray-200 dark:border-gray-700;
+}
+
+.api-method-body {
+  @apply p-4 bg-white dark:bg-gray-900;
+}
+
+.api-param {
+  @apply mb-4 pb-4 border-b border-gray-100 dark:border-gray-800 last:border-b-0 last:mb-0 last:pb-0;
+}
+
+.api-param-name {
+  @apply font-mono text-sm text-purple-600 dark:text-purple-400;
+}
+
+.api-param-type {
+  @apply inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 ml-2;
+}
+
+/* For light/dark mode toggle (to be implemented later) */
+.theme-toggle {
+  @apply p-2 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-purple-500;
+}
+
+/* Animation for link underline */
+.hover-underline-animation {
+  position: relative;
+}
+
+.hover-underline-animation::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  transform: scaleX(0);
+  height: 2px;
+  bottom: -2px;
+  left: 0;
+  background-color: var(--color-primary);
+  transform-origin: bottom right;
+  transition: transform 0.25s ease-out;
+}
+
+.hover-underline-animation:hover::after {
+  transform: scaleX(1);
+  transform-origin: bottom left;
+}

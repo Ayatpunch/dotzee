@@ -1,5 +1,5 @@
 import { isRef } from '../reactivity/ref';
-import type { ZestRegistry, StoreRegistryEntry, StoreInstanceType } from '../store/types';
+import type { DotzeeRegistry, StoreRegistryEntry, StoreInstanceType } from '../store/types';
 
 /**
  * Hydrates the state of a single store instance based on a snapshot, *without* triggering change signals.
@@ -17,7 +17,7 @@ function _internal_hydrateStoreState(entry: StoreRegistryEntry<StoreInstanceType
                 // Only update if the value differs? Or always set? Let's always set for hydration simplicity.
                 entry.instance[key].value = targetStoreState[key];
             } else if (Object.prototype.hasOwnProperty.call(targetStoreState, key) && !entry.instance[key]) {
-                console.warn(`[Zest SSR Hydration - ${storeId}] Property "${key}" found in hydration snapshot but not in client-side setup store instance.`);
+                console.warn(`[Dotzee SSR Hydration - ${storeId}] Property "${key}" found in hydration snapshot but not in client-side setup store instance.`);
             }
         }
     } else {
@@ -29,12 +29,12 @@ function _internal_hydrateStoreState(entry: StoreRegistryEntry<StoreInstanceType
                 }
                 // else {
                 // Optional: Warn if a state key is missing in the hydration snapshot?
-                // console.warn(`[Zest SSR Hydration - ${storeId}] Initial state key "${key}" missing in hydration snapshot.`);
+                // console.warn(`[Dotzee SSR Hydration - ${storeId}] Initial state key "${key}" missing in hydration snapshot.`);
                 //}
             });
         } else {
             // Should not happen for correctly defined Options stores
-            console.warn(`[Zest SSR Hydration - ${storeId}] Missing initialStateKeys for options store during hydration.`);
+            console.warn(`[Dotzee SSR Hydration - ${storeId}] Missing initialStateKeys for options store during hydration.`);
             // Attempt a less safe merge as a fallback?
             // Object.assign(entry.instance, targetStoreState);
         }
@@ -43,22 +43,22 @@ function _internal_hydrateStoreState(entry: StoreRegistryEntry<StoreInstanceType
 }
 
 /**
- * Hydrates Zest stores on the client with state received from the server.
+ * Hydrates Dotzee stores on the client with state received from the server.
  * This should be called *before* the main React application is mounted.
  *
  * It iterates through the provided state snapshot and applies the state
  * to the corresponding stores found in the target registry (usually the global registry).
  *
- * @param registry The ZestRegistry instance to hydrate (typically the global one on the client).
+ * @param registry The DotzeeRegistry instance to hydrate (typically the global one on the client).
  * @param initialStateSnapshot The state object received from the server, where keys are store IDs.
  */
-export function hydrateZestState(registry: ZestRegistry, initialStateSnapshot: Record<string, any>): void {
+export function hydrateDotzeeState(registry: DotzeeRegistry, initialStateSnapshot: Record<string, any>): void {
     if (!initialStateSnapshot || typeof initialStateSnapshot !== 'object') {
-        console.warn('[Zest SSR Hydration] Invalid initialStateSnapshot received. Skipping hydration.');
+        console.warn('[Dotzee SSR Hydration] Invalid initialStateSnapshot received. Skipping hydration.');
         return;
     }
 
-    console.log('[Zest SSR Hydration] Starting hydration...', initialStateSnapshot);
+    console.log('[Dotzee SSR Hydration] Starting hydration...', initialStateSnapshot);
 
     for (const storeId in initialStateSnapshot) {
         if (Object.prototype.hasOwnProperty.call(initialStateSnapshot, storeId)) {
@@ -66,17 +66,17 @@ export function hydrateZestState(registry: ZestRegistry, initialStateSnapshot: R
             const entry = registry.get(storeId);
 
             if (entry) {
-                // console.log(`[Zest SSR Hydration - ${storeId}] Hydrating store...`);
+                // console.log(`[Dotzee SSR Hydration - ${storeId}] Hydrating store...`);
                 _internal_hydrateStoreState(entry, targetStoreState);
             } else {
-                // This is expected if the store's defineZestStore hasn't run yet on the client.
+                // This is expected if the store's defineDotzeeStore hasn't run yet on the client.
                 // It usually indicates that the component using the store wasn't part of the initial
                 // server render or its module hasn't been loaded/parsed yet.
-                // console.warn(`[Zest SSR Hydration - ${storeId}] Store definition not found in registry during hydration. State for this store was not applied.`);
+                // console.warn(`[Dotzee SSR Hydration - ${storeId}] Store definition not found in registry during hydration. State for this store was not applied.`);
                 // No warning needed here, as stores might be lazy-loaded after hydration
             }
         }
     }
-    console.log('[Zest SSR Hydration] Hydration complete.');
+    console.log('[Dotzee SSR Hydration] Hydration complete.');
 
 } 

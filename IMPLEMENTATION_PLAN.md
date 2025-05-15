@@ -1,4 +1,4 @@
-# Zest: Implementation Plan
+# Dotzee: Implementation Plan
 
 This document outlines the development phases and tasks for creating the Pinia-like reactive state library for React.
 
@@ -11,7 +11,7 @@ Specifically look at Task n: Project Setup within Phase n and think about the to
 
 ## Proposed Project Directory Structure
 
-This section outlines the anticipated directory structure for the `src` folder of the Zest library as it evolves through the development phases. This structure aims for modularity, clear separation of concerns, and maintainability.
+This section outlines the anticipated directory structure for the `src` folder of the Dotzee library as it evolves through the development phases. This structure aims for modularity, clear separation of concerns, and maintainability.
 
 ```text
 src/
@@ -21,14 +21,14 @@ src/
 │   └── index.ts        # Exports the public API of this module
 │
 ├── store/              # Store definition, management, and core logic
-│   ├── defineZestStore.ts  # The main `defineZestStore` function
+│   ├── defineDotzeeStore.ts  # The main `defineDotzeeStore` function
 │   ├── store.ts        # Internal logic for a single store instance
 │   ├── storeRegistry.ts# Manages store instances (singleton pattern)
 │   ├── types.ts        # TypeScript types specific to stores
-│   └── index.ts        # Exports `defineZestStore` and related types
+│   └── index.ts        # Exports `defineDotzeeStore` and related types
 │
 ├── react/              # React integration hooks and utilities
-│   ├── useStore.ts     # The primary hook (e.g., useZestStore or use[StoreName])
+│   ├── useStore.ts     # The primary hook (e.g., useDotzeeStore or use[StoreName])
 │   # Potentially other React-specific utilities or hooks
 │   └── index.ts        # Exports the React hooks
 │
@@ -53,7 +53,7 @@ src/
 ├── utils/              # Common utility functions used across modules
 │   └── index.ts        # (e.g., isObject, warning messages, type guards)
 │
-└── index.ts            # Main public entry point of the Zest library
+└── index.ts            # Main public entry point of the Dotzee library
                         # Re-exports the main user-facing APIs
 ```
 
@@ -61,7 +61,7 @@ This structure is a guideline and may be refined as development progresses and n
 
 ## Phase 1: Core Reactivity, Dual Store Definitions & React Integration (MVP+)
 
-**Goal:** Establish the fundamental reactive engine (including `ref` and `computed` primitives), the initial `defineZestStore` API supporting both **Options** and **Setup** syntaxes, and the core React hook integration.
+**Goal:** Establish the fundamental reactive engine (including `ref` and `computed` primitives), the initial `defineDotzeeStore` API supporting both **Options** and **Setup** syntaxes, and the core React hook integration.
 
 **Estimated Time:** 2.5 - 4.5 months (Increased due to Setup Store support)
 
@@ -91,7 +91,7 @@ This structure is a guideline and may be refined as development progresses and n
 3.  **Store Implementation (`src/store/`):**
 
     - [x] Design the internal structure for a single store instance, incorporating the change signal.
-    - [x] Adapt `defineZestStore(id, options | setupFunction)` to handle both definition styles:
+    - [x] Adapt `defineDotzeeStore(id, options | setupFunction)` to handle both definition styles:
       - [x] **Options Store (`options` object):**
         - [x] `id`: Unique string identifier.
         - [x] `options.state`: Function returning the initial state object (wrapped with `reactive`).
@@ -107,8 +107,8 @@ This structure is a guideline and may be refined as development progresses and n
 
 4.  **React Integration (`src/react/`):**
 
-    - [x] Create the main hook (`useZestStore(storeHook)`) in `src/react/useZestStore.ts`.
-    - [x] Modify `defineZestStore` to return an augmented hook function (`ZestStoreHook`) containing `$id` and `$changeSignal` properties needed by `useZestStore`.
+    - [x] Create the main hook (`useDotzeeStore(storeHook)`) in `src/react/useDotzeeStore.ts`.
+    - [x] Modify `defineDotzeeStore` to return an augmented hook function (`DotzeeStoreHook`) containing `$id` and `$changeSignal` properties needed by `useDotzeeStore`.
     - [x] Hook retrieves the store instance and subscribes to changes using `useSyncExternalStore` (built-in for React 18+).
         - [x] `subscribe` function links to the specific store instance's **central change signal** (obtained via `storeHook.$changeSignal`).
         - [x] `getSnapshot` function returns the `changeSignal.value` to ensure React re-renders.
@@ -116,10 +116,10 @@ This structure is a guideline and may be refined as development progresses and n
 
 5.  **Initial TypeScript Typing:**
 
-    - [x] Basic generic types for `defineZestStore` to infer state type.
+    - [x] Basic generic types for `defineDotzeeStore` to infer state type.
     - [x] Basic types for actions.
     - [x] Type the return value of the `useStore` hook.
-    - [x] Refined type handling in `defineZestStore` to ensure correct type inference for Setup Store return types.
+    - [x] Refined type handling in `defineDotzeeStore` to ensure correct type inference for Setup Store return types.
 
 6.  **Simple Example Application:** (Setup Complete, Functionality Implemented & Tested)
     - [x] Create a very basic React app (e.g., using Vite or Create React App) to test the library.
@@ -137,7 +137,7 @@ This structure is a guideline and may be refined as development progresses and n
 
 1.  **Getters (Computed Properties):**
 
-    - [x] Add `options.getters` to `defineZestStore`.
+    - [x] Add `options.getters` to `defineDotzeeStore`.
     - [x] Getters should be functions that take `state` as an argument.
     - [x] Integrate getters into the store instance, making them accessible (e.g., `store.myGetter`).
     - [x] Ensure getters are reactive:
@@ -154,7 +154,7 @@ This structure is a guideline and may be refined as development progresses and n
 
 3.  **Advanced TypeScript Typing:**
 
-    - [x] Refine `defineZestStore` generics for:
+    - [x] Refine `defineDotzeeStore` generics for:
       - [x] Inferring state type `S`.
       - [x] Inferring getters type `G` (and their return types).
       - [x] Inferring actions type `A` (including parameters and return types of async functions).
@@ -176,8 +176,8 @@ This structure is a guideline and may be refined as development progresses and n
 
 1.  **Redux DevTools Connector:**
 
-    - [x] Implement a utility (`src/devtools/connector.ts`) to connect to the DevTools (`enableZestDevTools`).
-        - [x] Send initial state to DevTools on store creation (`_internal_initStoreState` called from `defineZestStore`).
+    - [x] Implement a utility (`src/devtools/connector.ts`) to connect to the DevTools (`enableDotzeeDevTools`).
+        - [x] Send initial state to DevTools on store creation (`_internal_initStoreState` called from `defineDotzeeStore`).
         - [x] Send state snapshots and action information to DevTools for **Options Stores**:
             - [x] Capture action name and basic payload.
             - [x] Capture *global* state snapshot after action.
@@ -189,13 +189,13 @@ This structure is a guideline and may be refined as development progresses and n
 
 2.  **State Snapshots & Time Travel:**
 
-    - [x] Implement logic to capture serializable *global* state snapshots (`getGlobalZestStateSnapshot`).
+    - [x] Implement logic to capture serializable *global* state snapshots (`getGlobalDotzeeStateSnapshot`).
     - [x] Implement logic to "jump" to a past state (Time Travel) (`_internal_resetStoreState` and subscriber logic).
     - [x] Ensure DevTools can display the (global) state tree (basic implementation).
 
 3.  **DevTools Configuration:**
 
-    - [x] Provide an easy way for users to enable DevTools integration (`enableZestDevTools(registry, options)`).
+    - [x] Provide an easy way for users to enable DevTools integration (`enableDotzeeDevTools(registry, options)`).
     - [x] Allow disabling in production (by conditional import/call in user code).
 
 4.  **Example Application Updates:**
@@ -211,50 +211,50 @@ This structure is a guideline and may be refined as development progresses and n
 
 1.  **Server-Side Rendering (SSR) Support:**
 
-    - [x] **Registry Scoping:** Implemented request-scoped registries (`createZestRegistry`, `setActiveZestRegistry`, `resetActiveZestRegistry`, `getActiveZestRegistry`) to prevent state sharing between requests on the server. `defineZestStore` now uses the active registry.
-    - [x] **State Serialization:** Implemented `serializeZestState(registry)` (using `getGlobalZestStateSnapshot` internally) to capture the state of a specific registry (e.g., the request registry on the server) into a serializable format.
-    - [x] **Client-Side Hydration:** Implemented `hydrateZestState(registry, snapshot)` to apply server state to client-side stores (typically the global registry) *before* React hydration, without triggering initial change signals.
+    - [x] **Registry Scoping:** Implemented request-scoped registries (`createDotzeeRegistry`, `setActiveDotzeeRegistry`, `resetActiveDotzeeRegistry`, `getActiveDotzeeRegistry`) to prevent state sharing between requests on the server. `defineDotzeeStore` now uses the active registry.
+    - [x] **State Serialization:** Implemented `serializeDotzeeState(registry)` (using `getGlobalDotzeeStateSnapshot` internally) to capture the state of a specific registry (e.g., the request registry on the server) into a serializable format.
+    - [x] **Client-Side Hydration:** Implemented `hydrateDotzeeState(registry, snapshot)` to apply server state to client-side stores (typically the global registry) *before* React hydration, without triggering initial change signals.
     - [x] **Integration Pattern & Testing:** Successfully integrated and tested the SSR flow using Next.js (App Router) demonstrating the pattern:
         - Server Components manage the registry lifecycle for a request.
         - Server Components ensure store definitions run and access store instances *directly from the registry* for initial state setup.
         - Server Components serialize the state and pass it to Client Components.
-        - Client Components use `hydrateZestState` on mount and then use standard Zest hooks (`useZestStore`) for reactive UI.
+        - Client Components use `hydrateDotzeeState` on mount and then use standard Dotzee hooks (`useDotzeeStore`) for reactive UI.
     - [x] **SSR Testing (Next.js - Successful):**
         - Reverted SSR-related changes in the Vite example app.
-        - Created a new example project `zest-next-example` using `create-next-app` with the App Router.
-        - Linked the `zest-state-library` using a relative file path dependency (`"zest-state-library": "file:../"`) in `package.json` after initial linking issues, requiring a library rebuild.
+        - Created a new example project `dotzee-next-example` using `create-next-app` with the App Router.
+        - Linked the `dotzee` using a relative file path dependency (`"dotzee": "file:../"`) in `package.json` after initial linking issues, requiring a library rebuild.
         - Implemented the recommended SSR pattern for App Router:
             - **`app/page.tsx` (Server Component):**
-                - Creates a new registry for the request (`createZestRegistry`).
-                - Activates this registry (`setActiveZestRegistry`).
+                - Creates a new registry for the request (`createDotzeeRegistry`).
+                - Activates this registry (`setActiveDotzeeRegistry`).
                 - Ensures the relevant store definition (`useCounterOptionsStore`) runs within the server context, registering the store in the request-scoped registry.
                 - Accesses the store instance *directly* from the registry (e.g., `registry.get('counterOptions')`) to potentially set initial state (though not done in the basic example).
-                - Serializes the state from the request registry (`serializeZestState`).
-                - Resets the active registry (`resetActiveZestRegistry`) before sending the response.
+                - Serializes the state from the request registry (`serializeDotzeeState`).
+                - Resets the active registry (`resetActiveDotzeeRegistry`) before sending the response.
                 - Passes the serialized state as a prop to a Client Component.
             - **`app/ClientPage.tsx` (Client Component):**
-                - Receives the `initialZestState` prop.
+                - Receives the `initialDotzeeState` prop.
                 - Uses `useEffect` (running only once on mount) to:
-                    - Get the client-side global registry (`getGlobalZestRegistry`).
-                    - Call `hydrateZestState` with the global registry and the received `initialZestState`.
-                    - Optionally enable DevTools (`enableZestDevTools`).
-                - Uses the standard `useZestStore(useCounterOptionsStore)` hook to access the store reactively for the UI.
+                    - Get the client-side global registry (`getGlobalDotzeeRegistry`).
+                    - Call `hydrateDotzeeState` with the global registry and the received `initialDotzeeState`.
+                    - Optionally enable DevTools (`enableDotzeeDevTools`).
+                - Uses the standard `useDotzeeStore(useCounterOptionsStore)` hook to access the store reactively for the UI.
         - Refactored `ClientPage.tsx` into a `components/` directory for better structure.
-        - Debugged and fixed an error where `getGlobalZestRegistry` wasn't exported correctly by adjusting exports in `src/store/index.ts` and rebuilding the library.
-        - Implicitly confirmed the correct pattern avoids calling React hooks like `useZestStore` in Server Components, resolving potential `useSyncExternalStore` errors in that context.
+        - Debugged and fixed an error where `getGlobalDotzeeRegistry` wasn't exported correctly by adjusting exports in `src/store/index.ts` and rebuilding the library.
+        - Implicitly confirmed the correct pattern avoids calling React hooks like `useDotzeeStore` in Server Components, resolving potential `useSyncExternalStore` errors in that context.
         - Successfully verified the SSR flow: state rendered on the server, hydrated on the client without flicker, and subsequent interactions were reactive. DevTools integration also worked correctly after hydration.
         - Resolved Tailwind CSS compatibility issues by downgrading from v4 to v3, which fixed styling issues in the example app.
         - Marked Phase 4, Task 1 (SSR Support) as complete in `IMPLEMENTATION_PLAN.md`.
 
 2.  **Store Modularity & Lazy Loading:**
 
-    - [x] Ensure stores register on first use automatically (current behavior is sufficient: `defineZestStore` registers in the active registry upon execution if the store ID is new).
+    - [x] Ensure stores register on first use automatically (current behavior is sufficient: `defineDotzeeStore` registers in the active registry upon execution if the store ID is new).
     - [x] Verify seamless operation with code-splitting (dynamic imports in frameworks like Next.js/Vite).
-        - Next.js example (`zest-next-example` with `LazyLoaderDisplay.tsx` and `FeatureComponent.tsx`/`featureStore.ts`) demonstrates that store definitions within dynamically imported chunks are registered correctly when the chunk loads. This shows compatibility.
+        - Next.js example (`dotzee-next-example` with `LazyLoaderDisplay.tsx` and `FeatureComponent.tsx`/`featureStore.ts`) demonstrates that store definitions within dynamically imported chunks are registered correctly when the chunk loads. This shows compatibility.
     - [ ] Add specific examples/tests for lazy-loaded stores, ensuring correct hydration and DevTools interactions.
-        - **Example:** `zest-next-example` provides a basic example of a lazy-loaded component using its own lazy-loaded store.
+        - **Example:** `dotzee-next-example` provides a basic example of a lazy-loaded component using its own lazy-loaded store.
         - **Hydration Gap & SSR for Lazy Stores:**
-            - The current global `hydrateZestState` is primarily for eagerly known stores.
+            - The current global `hydrateDotzeeState` is primarily for eagerly known stores.
             - For lazy-loaded stores requiring initial state from the server, the recommended pattern (Option A) is:
                 1. Server fetches/determines the specific initial state for the lazy store.
                 2. This state is passed as props to the lazy-loaded component.
@@ -271,8 +271,8 @@ This structure is a guideline and may be refined as development progresses and n
       - [x] Ability for plugins to extend store instances (add properties/methods).
       - [x] Ability to subscribe to state changes globally or per store (partially addressed: plugins can access `changeSignal` via `storeEntry`).
       - [x] Consider plugin context (access to registry, store instance, etc.) - `PluginContextApi` implemented.
-    - [x] Implement the plugin registration mechanism (e.g., `zest.use(plugin)` via `useZestPlugin`).
-    - [x] Implement the plugin execution logic within `defineZestStore` and action wrappers.
+    - [x] Implement the plugin registration mechanism (e.g., `dotzee.use(plugin)` via `useDotzeePlugin`).
+    - [x] Implement the plugin execution logic within `defineDotzeeStore` and action wrappers.
     - [x] Example Plugins:
       - [x] Basic logger plugin.
       - [x] Persistence plugin (e.g., sync to localStorage).
@@ -297,13 +297,27 @@ This structure is a guideline and may be refined as development progresses and n
 
 2.  **API Review and Refinement:**
 
-    - [ ] Review all public APIs for clarity, consistency, and ease of use.
-    - [ ] Gather feedback if possible.
+    - [x] Review all public APIs for clarity, consistency, and ease of use.
+    - [x] Gather feedback if possible. *(Marked as complete for current scope)*
 
 3.  **Extensive Testing:**
 
-    - [ ] **Unit Tests:** Increase coverage for all core modules, edge cases, and utilities.
-    - [ ] **Integration Tests:** Test interactions between reactive core, store, and React hooks.
+    - [x] **Unit Tests:** Increase coverage for all core modules, edge cases, and utilities.
+        - Current coverage for `reactive.ts`, `computed.ts` exists.
+        - Added `src/reactivity/ref.test.ts`
+        - Added `src/store/registry.test.ts`
+        - Added `src/devtools/connector.test.ts` (focused on snapshot testing)
+        - Added `src/ssr/serialization.test.ts`
+        - Added `src/ssr/hydration.test.ts`
+        - Added `src/plugins/manager.test.ts`
+        - Added `src/plugins/loggerPlugin.test.ts`
+        - Added `src/plugins/persistencePlugin.test.ts`
+        - [x] Expand `src/store/defineDotzeeStore.test.ts`
+        - [x] Review and expand `src/reactivity/reactive.test.ts`
+        - [x] Review and expand `src/reactivity/computed.test.ts`
+        - [x] Add tests for `src/plugins/devtoolsPlugin.ts` (Covered by connector.test.ts as devtoolsPlugin is not a separate file)
+        - [x] Add tests for any other utilities or minor modules.
+    - [x] **Integration Tests:** Write tests for interactions between different parts of the library (e.g., reactivity with store definition, SSR hydration with client-side stores).
     - [ ] **End-to-End (E2E) Tests:** Test example applications thoroughly.
     - [ ] **Performance Tests:** Basic benchmarks for common operations (state update, getter evaluation, component re-render).
     - [ ] **SSR Tests:** Verify SSR and hydration scenarios.
@@ -311,7 +325,7 @@ This structure is a guideline and may be refined as development progresses and n
 4.  **Comprehensive Documentation:**
 
     - [ ] **Getting Started Guide:** Installation, basic usage.
-    - [ ] **Core Concepts:** Reactivity, `defineZestStore`, state, getters, actions.
+    - [ ] **Core Concepts:** Reactivity, `defineDotzeeStore`, state, getters, actions.
     - [ ] **API Reference:** Detailed documentation for all public functions and types.
     - [ ] **Advanced Guides:** SSR, DevTools, Plugins, TypeScript usage, best practices.
     - [ ] **Store IDs and Namespacing:** Document best practices for choosing store IDs, how uniqueness is handled, and implications for DevTools, plugins, and code-splitting.
@@ -337,6 +351,6 @@ This structure is a guideline and may be refined as development progresses and n
     - [ ] Batching updates for performance.
     - [ ] More sophisticated DevTools features (e.g., custom panel).
     - [ ] Direct state mutation with patches (like Immer).
-    - [ ] **Enhanced SSR Hydration for Lazy-Loaded Stores (Option B):** Implement library-level support for `hydrateZestState` to automatically handle and apply pending hydration data for stores whose definitions are lazy-loaded after the initial global hydration call. This aims to simplify the developer experience compared to the manual prop-based initialization pattern (Option A from Phase 4).
+    - [ ] **Enhanced SSR Hydration for Lazy-Loaded Stores (Option B):** Implement library-level support for `hydrateDotzeeState` to automatically handle and apply pending hydration data for stores whose definitions are lazy-loaded after the initial global hydration call. This aims to simplify the developer experience compared to the manual prop-based initialization pattern (Option A from Phase 4).
 
 This plan provides a structured approach. We can check off tasks as they are completed.

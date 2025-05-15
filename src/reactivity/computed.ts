@@ -100,6 +100,8 @@ function runEffect(effect: () => void) {
 export function computed<T>(getter: () => T): ComputedRef<T> {
     let cachedValue: T;
     let dirty = true;
+    let _error: Error | null = null; // To store errors from the getter
+
     // Define computedRef object structure early using Object.create for symbol
     const computedRef = Object.create(null, {
         [ComputedRefSymbol]: { value: true, enumerable: false }
@@ -108,6 +110,7 @@ export function computed<T>(getter: () => T): ComputedRef<T> {
     const effect = () => { // This is the effect that depends on other refs/reactives
         if (!dirty) {
             dirty = true;
+            _error = null; // Reset error when dependencies change, forcing re-evaluation
             // When a dependency changes, this effect runs.
             // It marks the computed as dirty and triggers effects that depend on *this computed's value*.
             trigger(computedRef, 'value'); // Trigger effects depending on computedRef.value
@@ -117,9 +120,14 @@ export function computed<T>(getter: () => T): ComputedRef<T> {
     const runGetterAndTrackDeps = () => {
         const previousEffect = activeEffect;
         activeEffect = effect; // Set this computed's *re-run* effect as active
+        _error = null; // Clear previous error before attempting to recompute
         try {
             cachedValue = getter(); // Run the user's getter
             dirty = false;
+        } catch (e: any) {
+            _error = e instanceof Error ? e : new Error(String(e));
+            dirty = true; // Remain dirty if getter fails, so it tries to recompute on next access
+            // DO NOT throw _error here; let the .value getter handle it.
         } finally {
             activeEffect = previousEffect;
         }
@@ -130,9 +138,17 @@ export function computed<T>(getter: () => T): ComputedRef<T> {
         get() {
             // Track effects that depend on *this computed's value*
             track(computedRef, 'value');
+
             if (dirty) {
-                runGetterAndTrackDeps();
+                runGetterAndTrackDeps(); // This will attempt to compute and set _error if it fails
             }
+
+            // After attempting computation (if dirty), or if not dirty:
+            if (_error) { // If an error is cached (from current or previous failed attempt)
+                throw _error;
+            }
+            // If no error, cachedValue is returned.
+            // If runGetterAndTrackDeps was called and succeeded, dirty is false, _error is null.
             return cachedValue;
         },
         enumerable: true,

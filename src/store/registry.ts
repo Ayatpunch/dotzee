@@ -1,37 +1,37 @@
 import type { StoreRegistryEntry, StoreInstanceType } from './types';
 
-export type ZestRegistry = Map<string, StoreRegistryEntry<StoreInstanceType>>;
+export type DotzeeRegistry = Map<string, StoreRegistryEntry<StoreInstanceType>>;
 
 // The global registry, used by default on the client or if no active one is set.
-const globalRegistry: ZestRegistry = new Map();
+const globalRegistry: DotzeeRegistry = new Map();
 
 // Variable to hold the currently active registry. Defaults to the global one.
-let activeRegistry: ZestRegistry = globalRegistry;
+let activeRegistry: DotzeeRegistry = globalRegistry;
 
 /**
- * Creates a new, independent Zest registry instance.
+ * Creates a new, independent Dotzee registry instance.
  * Primarily used for SSR contexts.
  */
-export function createZestRegistry(): ZestRegistry {
+export function createDotzeeRegistry(): DotzeeRegistry {
     return new Map();
 }
 
 /**
- * Sets the currently active Zest registry.
+ * Sets the currently active Dotzee registry.
  * This should be called at the beginning of a server request
- * with a registry created by `createZestRegistry()`.
+ * with a registry created by `createDotzeeRegistry()`.
  * @param registry The registry instance to activate.
  */
-export function setActiveZestRegistry(registry: ZestRegistry): void {
+export function setActiveDotzeeRegistry(registry: DotzeeRegistry): void {
     activeRegistry = registry;
 }
 
 /**
- * Gets the currently active Zest registry.
- * @internal Used by defineZestStore and potentially DevTools/Plugins.
- * @returns The active ZestRegistry instance.
+ * Gets the currently active Dotzee registry.
+ * @internal Used by defineDotzeeStore and potentially DevTools/Plugins.
+ * @returns The active DotzeeRegistry instance.
  */
-export function getActiveZestRegistry(): ZestRegistry {
+export function getActiveDotzeeRegistry(): DotzeeRegistry {
     return activeRegistry;
 }
 
@@ -39,15 +39,15 @@ export function getActiveZestRegistry(): ZestRegistry {
  * Resets the active registry to the default global registry.
  * Should be called after a server request is processed.
  */
-export function resetActiveZestRegistry(): void {
+export function resetActiveDotzeeRegistry(): void {
     activeRegistry = globalRegistry;
 }
 
 /**
  * Gets the default global registry.
  * @internal Useful for client-side setup or DevTools access.
- * @returns The global ZestRegistry instance.
+ * @returns The global DotzeeRegistry instance.
  */
-export function getGlobalZestRegistry(): ZestRegistry {
+export function getGlobalDotzeeRegistry(): DotzeeRegistry {
     return globalRegistry;
 } 

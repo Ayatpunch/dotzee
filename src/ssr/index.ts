@@ -1,2 +1,2 @@
-export { hydrateZestState } from './hydration';
-export { serializeZestState } from './serialization'; 
+export { hydrateDotzeeState } from './hydration';
+export { serializeDotzeeState } from './serialization'; 

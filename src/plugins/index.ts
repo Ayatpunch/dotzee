@@ -1,4 +1,4 @@
-export { useZestPlugin } from './manager';
+export { useDotzeePlugin } from './manager';
 export type { Plugin, PluginContextApi, StoreCreatedContext, ActionContext, AfterActionContext } from './types';
 
 // Export example plugins

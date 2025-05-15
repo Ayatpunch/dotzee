@@ -7,14 +7,15 @@ import type {
 } from './types';
 import type { StoreInstanceType, StoreRegistryEntry } from '../store/types';
 import { getStoreStateSnapshotInternal } from '../devtools/connector'; // Placeholder, will create this next
+import { getGlobalDotzeeRegistry } from '../store/registry';
 
-/** Internal list of registered Zest plugins. */
-const zestPlugins: Plugin[] = [];
+/** Internal list of registered Dotzee plugins. */
+const dotzeePlugins: Plugin[] = [];
 
 /** Callbacks registered by plugins. */
-const onStoreCreatedCallbacks: Array<(context: StoreCreatedContext) => void> = [];
+const onStoreCreatedCallbacks: Array<(context: StoreCreatedContext) => void | Promise<void>> = [];
 const beforeActionCallbacks: Array<(context: ActionContext) => void> = [];
-const afterActionCallbacks: Array<(context: AfterActionContext) => void> = [];
+const afterActionCallbacks: Array<(context: AfterActionContext) => void | Promise<void>> = [];
 
 /**
  * The single, shared, read-only context API object provided to plugins.
@@ -42,73 +43,62 @@ const pluginContextApi: PluginContextApi = {
         }
     },
     getStoreStateSnapshot: (storeInstance: StoreInstanceType) => {
-        // This will require the storeEntry to determine isSetupStore and initialStateKeys.
-        // For now, this is a simplified placeholder. The actual implementation will need more context
-        // or `getStoreStateSnapshotInternal` will need to be callable with just the instance
-        // if it can infer the rest or if the plugin context needs to provide more.
-        // Let's assume `getStoreStateSnapshotInternal` will be adapted or called differently.
-        // This will be refined when `getStoreStateSnapshotInternal` is implemented.
-        // console.warn('[Zest Plugin] getStoreStateSnapshot from plugin context needs full storeEntry details for accurate snapshot.');
-        // This function is expected to be called with a StoreRegistryEntry in practice if we pass it.
-        // However, the type signature is (storeInstance: StoreInstanceType)
-        // This highlights a detail to resolve: how does this specific function get all necessary info?
-        // For now, we assume `getStoreStateSnapshotInternal` will be made to work or this signature will be adjusted.
-        // Actually, `getStoreStateSnapshotInternal` needs `isSetupStore` and `initialStateKeys`.
-        // This means the `pluginContextApi.getStoreStateSnapshot` might need to be called with more context, or removed/rethought.
-        // --> DECISION: For now, let's make it a NO-OP with a warning, as `getStoreStateSnapshotInternal` is better used internally
-        // by DevTools or other parts that have the full StoreRegistryEntry.
-        // Plugins needing a snapshot for a specific store typically operate within a hook that has access to the storeEntry.
+        // This requires access to the storeEntry or its properties (isSetupStore, initialStateKeys)
+        // For simplicity, if this is called from a plugin, the plugin should ideally already have
+        // the storeEntry from onStoreCreated or afterAction context.
+        // This direct call from pluginContextApi might be less common or need more context.
+        // Let's assume for now this might be a simplified version or used internally with care.
+        // A more robust solution might involve passing storeEntry or its relevant parts here.
+        // console.warn('[Dotzee] getStoreStateSnapshot in plugin context is basic and assumes direct instance knowledge.');
 
-        // Re-evaluating: The plugin context is general. If a plugin wants a snapshot of *any* store it somehow has a reference to,
-        // it won't have the `isSetupStore` or `initialStateKeys` readily available for *that arbitrary instance*.
-        // The `getGlobalZestStateSnapshot(registry)` is for ALL stores. This one is for A store.
-        // The most practical way is if this method is implicitly for the *current store in context* (e.g., within an action hook).
-        // However, the method signature `getStoreStateSnapshot: (storeInstance: StoreInstanceType)` implies it can be *any* instance.
+        // Attempt to find the store entry in the global registry to get metadata
+        // This is a workaround and not ideal for performance or multi-registry scenarios.
+        const registry = getGlobalDotzeeRegistry(); // Assuming access to some registry
+        let foundEntry: StoreRegistryEntry<StoreInstanceType> | undefined;
+        for (const entry of registry.values()) {
+            if (entry.instance === storeInstance) {
+                foundEntry = entry;
+                break;
+            }
+        }
 
-        // Let's assume for now `getStoreStateSnapshotInternal` is flexible enough, or we adjust.
-        // For the purpose of getting this file structure in place, we use a placeholder call.
-        // This will be properly implemented when getStoreStateSnapshotInternal is defined.
-        // It is likely that `getStoreStateSnapshotInternal` is the primary way, and plugins should use it if they have enough context.
-        // The `PluginContextApi` might not be the best place for a generic snapshot tool if it cannot guarantee context.
-
-        // For now, let's log a warning and return an empty object.
-        // The actual implementation will depend on how `getStoreStateSnapshotInternal` is designed.
-        console.warn("[Zest Plugin] `getStoreStateSnapshot` in plugin context is a placeholder and may not provide full store details yet.");
-        // This is a placeholder. The real call would need isSetupStore and initialStateKeys, which are not available from storeInstance alone.
-        // Option 1: Remove this from PluginContextApi if it's too problematic.
-        // Option 2: Document that plugins should try to use this within contexts where more info is available.
-        // Option 3: `getStoreStateSnapshotInternal` would need to somehow retrieve metadata from the instance (e.g. if instance is a proxy to an object that has this metadata).
-        // For now, to unblock, we will assume this function cannot be fully implemented without more context for the storeInstance.
-        return {}; // Placeholder
+        if (foundEntry) {
+            return getStoreStateSnapshotInternal(foundEntry.instance, foundEntry.isSetupStore, foundEntry.initialStateKeys);
+        }
+        // Fallback if not found or for a very generic case (might be inaccurate for options stores without keys)
+        return getStoreStateSnapshotInternal(storeInstance, false, undefined);
     },
 };
 
 /**
- * Registers a Zest plugin.
+ * Registers a Dotzee plugin.
  * @param plugin - The plugin to register.
  */
-export function useZestPlugin(plugin: Plugin): void {
-    if (zestPlugins.some(p => p.name === plugin.name)) {
-        console.warn(`[Zest] Plugin "${plugin.name}" already registered.`);
+export function useDotzeePlugin(plugin: Plugin): void {
+    if (dotzeePlugins.find(p => p.name === plugin.name)) {
+        console.warn(`[Dotzee] Plugin "${plugin.name}" already installed.`);
         return;
     }
-    plugin.install(pluginContextApi);
-    zestPlugins.push(plugin);
-    // console.log(`[Zest] Plugin "${plugin.name}" registered.`);
+    try {
+        plugin.install(_getPluginContextApi());
+        dotzeePlugins.push(plugin);
+    } catch (e) {
+        console.error(`[Dotzee] Error installing plugin "${plugin.name}":`, e);
+    }
 }
 
 /**
  * Notifies registered plugins about a store creation event.
  * @internal
  */
-export function _notifyStoreCreated(context: StoreCreatedContext): void {
-    onStoreCreatedCallbacks.forEach(callback => {
+export async function _notifyStoreCreated(context: StoreCreatedContext): Promise<void> {
+    for (const cb of onStoreCreatedCallbacks) {
         try {
-            callback(context);
-        } catch (error) {
-            console.error(`[Zest Plugin Error - ${context.storeEntry.id}] Error in onStoreCreated callback of plugin (unknown plugin):`, error);
+            await cb(context); // Await the callback
+        } catch (e) {
+            console.error(`[Dotzee] Error in plugin (onStoreCreated) for store "${context.storeEntry.id}":`, e);
         }
-    });
+    }
 }
 
 /**
@@ -116,25 +106,42 @@ export function _notifyStoreCreated(context: StoreCreatedContext): void {
  * @internal
  */
 export function _notifyBeforeAction(context: ActionContext): void {
-    beforeActionCallbacks.forEach(callback => {
+    for (const cb of beforeActionCallbacks) {
         try {
-            callback(context);
-        } catch (error) {
-            console.error(`[Zest Plugin Error - ${context.storeEntry.id}] Error in beforeAction callback for action "${context.actionName}" (unknown plugin):`, error);
+            cb(context);
+        } catch (e) {
+            console.error(`[Dotzee] Error in plugin (beforeAction) for store "${context.storeEntry.id}", action "${context.actionName}":`, e);
         }
-    });
+    }
 }
 
 /**
  * Notifies registered plugins after an action has been executed.
  * @internal
  */
-export function _notifyAfterAction(context: AfterActionContext): void {
-    afterActionCallbacks.forEach(callback => {
+export async function _notifyAfterAction(context: AfterActionContext): Promise<void> {
+    for (const cb of afterActionCallbacks) {
         try {
-            callback(context);
-        } catch (error) {
-            console.error(`[Zest Plugin Error - ${context.storeEntry.id}] Error in afterAction callback for action "${context.actionName}" (unknown plugin):`, error);
+            await cb(context); // Await the callback if it's async
+        } catch (e) {
+            console.error(`[Dotzee] Error in plugin (afterAction) for store "${context.storeEntry.id}", action "${context.actionName}":`, e);
         }
-    });
-} 
+    }
+}
+
+/**
+ * @internal For testing purposes only.
+ * Clears all registered plugins and their callbacks.
+ */
+export const _clearDotzeePlugins = (): void => {
+    dotzeePlugins.length = 0; // Clear the plugins array
+    onStoreCreatedCallbacks.length = 0; // Use .length = 0 for arrays
+    beforeActionCallbacks.length = 0; // Use .length = 0 for arrays
+    afterActionCallbacks.length = 0;  // Use .length = 0 for arrays
+};
+
+// Internal function to get the plugin API context
+/** @internal */
+export const _getPluginContextApi = (): PluginContextApi => {
+    return pluginContextApi;
+}; 

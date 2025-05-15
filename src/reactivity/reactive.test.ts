@@ -1098,6 +1098,114 @@ describe('Reactive Array Methods', () => {
         });
     });
 
+    describe('Direct Array Length Manipulation', () => {
+        it('should allow truncating array by setting length and trigger effects', () => {
+            reactiveArray.push(1, 2, 3, 4, 5);
+            const cLength = computed(() => reactiveArray.length);
+            const cIterate = computed(() => [...reactiveArray]);
+            const cIndex2 = computed(() => reactiveArray[2]); // Should become undefined
+
+            expect(cLength.value).toBe(5);
+            triggerStoreChangeCallback.mockClear();
+
+            reactiveArray.length = 2;
+
+            expect(reactiveArray).toEqual([1, 2]);
+            expect(originalArray).toEqual([1, 2]);
+            expect(cLength.value).toBe(2);
+            expect(cIterate.value).toEqual([1, 2]);
+            expect(cIndex2.value).toBeUndefined();
+            expect(triggerStoreChangeCallback).toHaveBeenCalledTimes(1);
+        });
+
+        it('should allow extending array by setting length (filling with empty slots) and trigger effects', () => {
+            reactiveArray.push(1, 2);
+            const cLength = computed(() => reactiveArray.length);
+            const cIterate = computed(() => [...reactiveArray]); // Iteration skips empty slots
+
+            expect(cLength.value).toBe(2);
+            triggerStoreChangeCallback.mockClear();
+
+            reactiveArray.length = 4;
+
+            expect(reactiveArray.length).toBe(4);
+            expect(originalArray.length).toBe(4);
+            expect(reactiveArray[0]).toBe(1);
+            expect(reactiveArray[1]).toBe(2);
+            expect(reactiveArray[2]).toBeUndefined(); // Empty slot
+            expect(reactiveArray[3]).toBeUndefined(); // Empty slot
+            expect(cLength.value).toBe(4);
+            expect(cIterate.value).toEqual([1, 2, undefined, undefined]); // Spread operator on array with empty slots
+            expect(triggerStoreChangeCallback).toHaveBeenCalledTimes(1);
+        });
+
+        it('should not trigger effects if length is set to the same value', () => {
+            reactiveArray.push(1, 2, 3);
+            triggerStoreChangeCallback.mockClear();
+            reactiveArray.length = 3;
+            expect(triggerStoreChangeCallback).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('Symbol Keys in Reactive Objects', () => {
+        const sym1 = Symbol('sym1');
+        const sym2 = Symbol('sym2');
+        let originalObj: any;
+        let reactiveObj: any;
+
+        beforeEach(() => {
+            originalObj = { name: 'test' };
+            reactiveObj = reactive(originalObj, triggerStoreChangeCallback);
+            triggerStoreChangeCallback.mockClear();
+        });
+
+        it('should allow setting and getting properties with Symbol keys', () => {
+            reactiveObj[sym1] = 'symbol value 1';
+            expect(reactiveObj[sym1]).toBe('symbol value 1');
+            expect(originalObj[sym1]).toBe('symbol value 1');
+            expect(triggerStoreChangeCallback).toHaveBeenCalledTimes(1); // For initial set
+
+            triggerStoreChangeCallback.mockClear();
+            reactiveObj[sym1] = 'updated symbol value 1';
+            expect(reactiveObj[sym1]).toBe('updated symbol value 1');
+            expect(triggerStoreChangeCallback).toHaveBeenCalledTimes(1); // For update
+        });
+
+        it('should trigger effects when Symbol-keyed property changes', () => {
+            const cSym1 = computed(() => reactiveObj[sym1]);
+            expect(cSym1.value).toBeUndefined();
+
+            reactiveObj[sym1] = 'hello';
+            expect(cSym1.value).toBe('hello');
+            expect(triggerStoreChangeCallback).toHaveBeenCalledTimes(1);
+        });
+
+        it('should handle deleting properties with Symbol keys', () => {
+            reactiveObj[sym1] = 'to be deleted';
+            reactiveObj[sym2] = 'to keep';
+            triggerStoreChangeCallback.mockClear();
+
+            const result = delete reactiveObj[sym1];
+            expect(result).toBe(true);
+            expect(reactiveObj[sym1]).toBeUndefined();
+            expect(originalObj[sym1]).toBeUndefined();
+            expect(sym1 in reactiveObj).toBe(false);
+            expect(triggerStoreChangeCallback).toHaveBeenCalledTimes(1);
+
+            // Deleting a non-existent symbol key
+            triggerStoreChangeCallback.mockClear();
+            const nonExistentSym = Symbol('nonExistent');
+            const result2 = delete reactiveObj[nonExistentSym];
+            expect(result2).toBe(true); // Delete on proxy always returns true for non-configurable or non-existent props if not strict
+            expect(triggerStoreChangeCallback).not.toHaveBeenCalled();
+        });
+
+        it('Reflect.has should work correctly for Symbol keys', () => {
+            expect(Reflect.has(reactiveObj, sym1)).toBe(false);
+            reactiveObj[sym1] = 'exists';
+            expect(Reflect.has(reactiveObj, sym1)).toBe(true);
+        });
+    });
 });
 
 describe('Reactive Date', () => {

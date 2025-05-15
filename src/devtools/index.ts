@@ -1,1 +1,1 @@
-export { enableZestDevTools, disconnectZestDevTools, isZestDevToolsEnabled } from './connector'; 
+export { enableDotzeeDevTools, disconnectDotzeeDevTools, isDotzeeDevToolsEnabled } from './connector'; 

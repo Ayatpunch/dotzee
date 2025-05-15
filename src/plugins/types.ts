@@ -1,23 +1,26 @@
 import type { StoreRegistryEntry, StoreInstanceType } from '../store/types';
 
+// Re-export types from store/types that are used in plugin type definitions
+export type { StoreRegistryEntry, StoreInstanceType };
+
 /**
- * Represents a Zest plugin.
- * Plugins can hook into store lifecycles and actions.
+ * Represents a Dotzee plugin.
+ * Plugins can hook into store lifecycle events and extend store functionality.
  */
 export interface Plugin {
     /** A unique name for the plugin, used for identification and debugging. */
     name: string;
     /**
      * The installation function for the plugin.
-     * This function is called once when the plugin is registered via `useZestPlugin`.
-     * @param context - The plugin context API, providing methods to hook into Zest.
+     * This function is called once when the plugin is registered via `useDotzeePlugin`.
+     * @param context - The plugin context API, providing methods to hook into Dotzee.
      */
     install: (context: PluginContextApi) => void;
 }
 
 /**
  * The API provided to plugins during their installation.
- * It allows plugins to register callbacks for various events.
+ * It allows plugins to register callbacks for various store events.
  */
 export interface PluginContextApi {
     /**
@@ -26,7 +29,7 @@ export interface PluginContextApi {
      * or visible to DevTools for its initial state.
      * @param callback - The function to call when a store is created.
      */
-    onStoreCreated: (callback: (context: StoreCreatedContext) => void) => void;
+    onStoreCreated: (callback: (context: StoreCreatedContext) => void | Promise<void>) => void;
 
     /**
      * Registers a callback to be executed before an action is invoked.
@@ -40,7 +43,7 @@ export interface PluginContextApi {
      * Provides access to the action's arguments, result (if successful), or error (if failed).
      * @param callback - The function to call after an action.
      */
-    afterAction: (callback: (context: AfterActionContext) => void) => void;
+    afterAction: (callback: (context: AfterActionContext) => void | Promise<void>) => void;
 
     /**
      * Extends a store instance with additional properties or methods.
@@ -49,7 +52,7 @@ export interface PluginContextApi {
      *
      * @remarks
      * Extensions are applied "as-is" directly onto the store instance.
-     * The Zest library does not perform deep merges or handle `this` binding for
+     * The Dotzee library does not perform deep merges or handle `this` binding for
      * any methods added via this extension mechanism. For TypeScript users,
      * module augmentation or casting might be necessary to achieve type safety
      * for these extensions on the store instance.
@@ -75,7 +78,7 @@ export interface PluginContextApi {
 }
 
 /**
- * Context provided to `onStoreCreated` plugin callbacks.
+ * Context provided to `onStoreCreated` callbacks.
  */
 export interface StoreCreatedContext {
     /** The registry entry for the newly created store. The `instance` property can be extended here. */
@@ -83,7 +86,7 @@ export interface StoreCreatedContext {
 }
 
 /**
- * Context provided to `beforeAction` plugin callbacks.
+ * Context provided to `beforeAction` callbacks.
  */
 export interface ActionContext {
     /** The registry entry for the store whose action is being called. */
@@ -95,7 +98,7 @@ export interface ActionContext {
 }
 
 /**
- * Context provided to `afterAction` plugin callbacks.
+ * Context provided to `afterAction` callbacks.
  */
 export interface AfterActionContext {
     /** The registry entry for the store whose action was called. */

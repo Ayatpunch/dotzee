@@ -27,12 +27,12 @@ export type MappedGetters<G> = {
 };
 
 /**
- * Options for defining a new Zest store.
+ * Options for defining a new Dotzee store.
  * @template S - The type of the state.
  * @template A - The type of the actions.
  * @template G - The type of the getters.
  */
-export interface DefineZestStoreOptions<
+export interface DefineDotzeeStoreOptions<
     S extends object,
     // Pass S and G to StoreActions for correct `this` type in actions
     A extends StoreActions<S, G> = {},
@@ -72,7 +72,7 @@ export type StoreInstance<S extends object, A extends StoreActions<S, G>, G exte
 export type SetupStoreReturnType = Record<string, Ref<any> | ComputedRef<any> | ((...args: any[]) => any) | object | any>;
 
 /**
- * Represents the setup function passed to defineZestStore for Setup Stores.
+ * Represents the setup function passed to defineDotzeeStore for Setup Stores.
  */
 export type SetupStoreFunction<R extends SetupStoreReturnType = SetupStoreReturnType> = () => R;
 
@@ -91,18 +91,18 @@ interface StoreHookProps {
 }
 
 /**
- * Represents the hook function returned by defineZestStore,
+ * Represents the hook function returned by defineDotzeeStore,
  * providing access to the specific store instance type (Options or Setup).
  * Includes attached properties like $id and $changeSignal.
  */
-export type ZestStoreHook<T extends StoreInstanceType> = (() => T) & StoreHookProps;
+export type DotzeeStoreHook<T extends StoreInstanceType> = (() => T) & StoreHookProps;
 
 // --- Registry --- //
-export type ZestRegistry = Map<string, StoreRegistryEntry<StoreInstanceType>>;
+export type DotzeeRegistry = Map<string, StoreRegistryEntry<StoreInstanceType>>;
 
 // Represents the structure stored in the registry for each store
 export interface StoreRegistryEntry<T extends StoreInstanceType> {
-    hook: ZestStoreHook<T>; // The hook function itself
+    hook: DotzeeStoreHook<T>; // The hook function itself
     instance: T; // The actual store instance
     changeSignal: Ref<number>; // The signal for this store
     id: string; // The store's ID

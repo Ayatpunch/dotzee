@@ -249,9 +249,14 @@ function createReactiveObject<T extends object>(target: T, triggerStoreChange?: 
         },
         set(targetObj, key, newValue, receiver) {
             const oldValue = Reflect.get(targetObj, key, receiver);
-            const hadKey = Array.isArray(targetObj) ?
-                Number(key) < (targetObj as any[]).length : // For arrays, check if index is within current length
-                Reflect.has(targetObj, key); // For objects, use Reflect.has to correctly handle symbol keys
+            let hadKey;
+            if (Array.isArray(targetObj) && key === 'length') {
+                hadKey = true; // 'length' property always exists on an array
+            } else if (Array.isArray(targetObj)) {
+                hadKey = Number(key) < (targetObj as any[]).length;
+            } else {
+                hadKey = Reflect.has(targetObj, key);
+            }
 
             const result = Reflect.set(targetObj, key, newValue, receiver);
 
@@ -262,22 +267,23 @@ function createReactiveObject<T extends object>(target: T, triggerStoreChange?: 
                     trigger(targetObj, key);
                     trigger(targetObj, ITERATE_KEY); // New key means iteration changes
                     if (Array.isArray(targetObj)) {
-                        trigger(targetObj, 'length'); // Setting a new index past current length affects length
+                        // This case is for when a new index is set beyond current length,
+                        // which implicitly changes length.
+                        trigger(targetObj, 'length');
                     }
                     triggerStoreSubscribers(targetObj, triggerStoreChange);
                 } else if (oldValue !== newValue) {
-                    trigger(targetObj, key);
-                    // ITERATE_KEY might be needed if computed properties iterate over values
-                    // and the new value changes the iteration result.
-                    // For arrays, changing an element's value doesn't change 'length' or key set.
-                    // For objects, changing a value doesn't change key set.
-                    // Let's trigger ITERATE_KEY for now for safety, can be optimized if becomes a bottleneck.
-                    trigger(targetObj, ITERATE_KEY);
+                    trigger(targetObj, key); // Trigger for the key itself (e.g., 'length' or specific index)
+                    trigger(targetObj, ITERATE_KEY); // Value change can affect iteration
+
+                    // If an array's length is reduced, trigger for the removed indices
+                    if (Array.isArray(targetObj) && key === 'length' && typeof newValue === 'number' && typeof oldValue === 'number' && newValue < oldValue) {
+                        for (let i = newValue; i < oldValue; i++) {
+                            trigger(targetObj, i.toString());
+                        }
+                    }
                     triggerStoreSubscribers(targetObj, triggerStoreChange);
                 }
-                // Explicitly handle direct 'length' modification for arrays
-                // This case is actually covered if oldValue (old length) !== newValue (new length)
-                // No specific separate handling for `key === 'length'` needed here if the above conditions are met.
             }
             return result;
         },

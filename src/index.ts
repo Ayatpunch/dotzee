@@ -1,16 +1,16 @@
 // Placeholder for the main library export
-export const hello = () => 'Hello from Zest library!';
+export const hello = () => 'Hello from Dotzee library!';
 
 // Re-export store functionalities
-export { defineZestStore } from './store';
+export { defineDotzeeStore } from './store';
 // Export core types directly from the store module index
 export type {
     StoreInstance,
-    DefineZestStoreOptions,
+    DefineDotzeeStoreOptions,
     StoreActions,
     StoreGetters,
     SetupStoreFunction,
-    ZestStoreHook,
+    DotzeeStoreHook,
     MappedGetters
 } from './store';
 
@@ -19,7 +19,7 @@ export type {
 // export { reactive, subscribe } from './reactivity';
 
 // Re-export the main React hook
-export { useZestStore } from './react';
+// export { useDotzeeStore } from './react';
 
 // Re-export core reactivity primitives (potentially useful for setup stores or advanced usage)
 export { ref, isRef } from './reactivity/ref';
@@ -30,7 +30,7 @@ export type { ComputedRef } from './reactivity/computed'; // Export ComputedRef 
 
 export * from './reactivity';
 export * from './store';
-export * from './react';
+// export * from './react';
 export * from './devtools'; // Export DevTools functions
 
 // Export SSR utilities

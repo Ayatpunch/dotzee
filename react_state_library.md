@@ -1,11 +1,11 @@
-# Zest: A Pinia-like Reactive State Library for React
+# Dotzee: A Pinia-like Reactive State Library for React
 
 ## Overview & Goals
 
 We propose building a **TypeScript-based** state management library for React that emulates Vue/Pinia's reactivity and developer experience. It will use a **Proxy-based** reactivity core (with an eye on future React Signals), a **composition-friendly API** (akin to Pinia's `defineStore`), and robust **DevTools integration**. Key goals include strong type safety (full generics and inference), support for apps of all sizes (modular stores, lazy loading, SSR), and intuitive patterns for actions and computed state. We will leverage React 18's new hooks (like `useSyncExternalStore`) for subscriptions, and provide a smooth developer experience with autocompletion, hot-reloading, and debugging tools. The library's architecture will explicitly address:
 
 - **Reactivity System**: A Proxy-based reactive store (fine-grained updates) vs. possible Signal abstraction.
-- **Store Structure**: Composition-style stores (`defineZestStore` or similar), modularization, lazy registration, and SSR-safe instantiation.
+- **Store Structure**: Composition-style stores (`defineDotzeeStore` or similar), modularization, lazy registration, and SSR-safe instantiation.
 - **Actions & Derived State**: Store methods (actions) for mutations, and getters/computed values for derived data.
 - **Type Safety**: Full TypeScript support, leveraging generics so state and actions are strongly typed with perfect IDE completion.
 - **DevTools**: Integration (e.g. via Redux DevTools API or custom React DevTools plugin) to inspect state trees, actions, and enable time-travel debugging.
@@ -26,14 +26,14 @@ Alternatively, we'll consider a **Signal-based** fallback or future mode. Signal
 
 ### Composition-Friendly Stores with Dual Syntax
 
-We will provide a **`defineZestStore`** API (similar to Pinia's `defineStore`) for creating stores, supporting **two distinct syntaxes** for flexibility:
+We will provide a **`defineDotzeeStore`** API (similar to Pinia's `defineStore`) for creating stores, supporting **two distinct syntaxes** for flexibility:
 
 1.  **Options Store (Object-based):**
     Similar to Vue's Options API, users provide an object with `state`, `actions`, and `getters` properties.
 
     ```ts
     // Example Options Store
-    export const useCounterStore = defineZestStore('counter', {
+    export const useCounterStore = defineDotzeeStore('counter', {
       state: () => ({ count: 0 }),
       actions: {
         increment() {
@@ -55,10 +55,10 @@ We will provide a **`defineZestStore`** API (similar to Pinia's `defineStore`) f
     Similar to Vue's Composition API setup function, users provide a function where they define reactive state (`ref`), computed values (`computed`), and methods. The function returns an object containing the properties and methods to expose.
 
     ```ts
-    import { ref, computed } from 'zest'; // Assuming these are exported from our library
+    import { ref, computed } from 'dotzee'; // Assuming these are exported from our library
 
     // Example Setup Store
-    export const useCounterStore = defineZestStore('counterSetup', () => {
+    export const useCounterStore = defineDotzeeStore('counterSetup', () => {
       // Reactive state
       const count = ref(0);
 
@@ -90,7 +90,7 @@ Each store, regardless of definition style, is a **singleton instance** (unless 
 
 - **Namespacing/IDs:** Each store has a unique name. Internally we keep a registry mapping names to store instances. If a store is defined in code-splitted chunks, the first call to `useStore()` for that name will load/create it.
 
-- **SSR Support:** For server-side rendering, we must avoid shared mutable state across requests. Thus `defineZestStore` will detect SSR mode and create a fresh store instance per request (or context). Pinia supports SSR safely, and we'll similarly instantiate stores on demand on the server. After rendering, the server can serialize the store's state and hydrate it on the client. On the client, we'll check if there's preloaded state (hydration) to populate initial store values. This ensures no data leaks between users.
+- **SSR Support:** For server-side rendering, we must avoid shared mutable state across requests. Thus `defineDotzeeStore` will detect SSR mode and create a fresh store instance per request (or context). Pinia supports SSR safely, and we'll similarly instantiate stores on demand on the server. After rendering, the server can serialize the store's state and hydrate it on the client. On the client, we'll check if there's preloaded state (hydration) to populate initial store values. This ensures no data leaks between users.
 
 - **Provider/Context (optional):** Unlike Redux, we may not need a single Provider since stores can be used via hooks globally. However, we can offer an optional `<StoreProvider>` for bundling all stores or for scoped contexts (e.g., per-tenant data). Support for React Context can help with tree-shaking or multiple store roots, if needed.
 
@@ -102,7 +102,7 @@ Using the Options Store example:
 
 ```jsx
 // counterStore.ts - Defined using Options Store syntax
-export const useCounterStore = defineZestStore('counter', { /* ... as above ... */ });
+export const useCounterStore = defineDotzeeStore('counter', { /* ... as above ... */ });
 
 // CounterComponent.tsx
 import { useCounterStore } from './counterStore';
@@ -124,8 +124,8 @@ Using the Setup Store example:
 
 ```jsx
 // counterSetupStore.ts - Defined using Setup Store syntax
-import { ref, computed } from 'zest';
-export const useCounterSetupStore = defineZestStore('counterSetup', () => { /* ... as above ... */ });
+import { ref, computed } from 'dotzee';
+export const useCounterSetupStore = defineDotzeeStore('counterSetup', () => { /* ... as above ... */ });
 
 // CounterSetupComponent.tsx
 import { useCounterSetupStore } from './counterSetupStore';
@@ -164,7 +164,7 @@ Both approaches rely on the underlying reactivity system to ensure derived value
 
 Our library will be **TypeScript-first**. We aim for full type inference so that users get IDE autocompletion on state, actions, and getters without writing extra types. Pinia boasts that "types are inferred, which means stores provide you with autocompletion even in JavaScript!" Similarly, we will use TS generics and `as const` patterns to infer store shapes.
 
-Concretely, `defineZestStore` can be a generic factory, e.g. `defineZestStore<S, G, A>(name: string, options: StoreOptions<S, G, A>)` where `S` is the state type, `G` derived getters, `A` action functions. TypeScript will infer `S` and `G` from the `state` and `getters` definitions. Actions will be bound so that `this` has type `S & G & A`. This is like how Vue's Composition API infers `ref` types.
+Concretely, `defineDotzeeStore` can be a generic factory, e.g. `defineDotzeeStore<S, G, A>(name: string, options: StoreOptions<S, G, A>)` where `S` is the state type, `G` derived getters, `A` action functions. TypeScript will infer `S` and `G` from the `state` and `getters` definitions. Actions will be bound so that `this` has type `S & G & A`. This is like how Vue's Composition API infers `ref` types.
 
 We will take advantage of TypeScript's latest features (mapped types, template literal types if needed) to ensure that store usage is strongly typed. For example, if a state field is `count: number`, then `store.count` is known as number. If an action is defined as `(payload: string) => void`, TS will infer that signature on `store.myAction`. We can reference Pinia's TS support as inspiration.
 
@@ -192,12 +192,12 @@ Below is a high-level comparison of our proposed system versus existing React st
 
 | **Feature**            | **Proposed (Pinia-like)**                                         | **Valtio**                         | **Jotai**                                    | **MobX**                                 | **Redux**                        |
 | ---------------------- | ----------------------------------------------------------------- | ---------------------------------- | -------------------------------------------- | ---------------------------------------- | -------------------------------- |
-| **Paradigm**           | Stores via `defineZestStore`; actions/mutators                        | Proxy-based global state           | Atomic atoms/selectors                       | Observables + decorators                 | Reducers + immutable state       |
+| **Paradigm**           | Stores via `defineDotzeeStore`; actions/mutators                        | Proxy-based global state           | Atomic atoms/selectors                       | Observables + decorators                 | Reducers + immutable state       |
 | **Reactivity**         | Proxy-based (fine-grained subscriptions)                          | Proxy (fine-grained)               | Atoms (update only dependent parts)          | Observables (track props accessed)       | Immutable diff on dispatch       |
 | **TypeScript Support** | Full TS generics; type inference                                  | Yes (TS-friendly)                  | Yes, scales to enterprise TS                 | Good (MobX 6+ is TS-first)               | Good (with Redux Toolkit)        |
 | **API Style**          | Composition-style hooks, actions, getters                         | Minimal hooks (`useSnapshot`)      | React hooks (`useAtom`/`useAtoms`)           | Class decorators or `makeAutoObservable` | Hook (`useSelector/useDispatch`) |
 | **DevTools**           | Custom plugin / Redux DevTools support                            | Redux DevTools via `devtools` util | React DevTools or Redux DevTools with plugin | `mobx-react-devtools` panel available    | Official Redux DevTools          |
-| **Boilerplate**        | Low (defineZestStore stores, write actions)                                | Very low (just proxy state)        | Low (atom definitions)                       | Low (auto-observable stores)             | Higher (reducers/actions)        |
+| **Boilerplate**        | Low (defineDotzeeStore stores, write actions)                                | Very low (just proxy state)        | Low (atom definitions)                       | Low (auto-observable stores)             | Higher (reducers/actions)        |
 | **Mutability**         | Mutable state under the hood                                      | Mutable via proxy                  | Immutable usage pattern (atoms)              | Mutable via observables                  | Strictly immutable updates       |
 | **Scalability**        | Modules + code-splitting; SSR-friendly                            | Global state (can split proxies)   | Atom-based (any scale)                       | Designed for large apps                  | Centralized store for large apps |
 | **Key Use Cases**      | Small to enterprise apps with React, need easy composition and TS | Fine-grained updates, simple state | Fine-grained local/global state              | Complex state + derivations              | Predictable state + time travel  |
@@ -206,6 +206,6 @@ _Table: Comparison of state libraries. Our proposed library combines Vue/Pinia's
 
 ## Conclusion
 
-The proposed React state library will deliver **Pinia-like developer experience** in a React setting. By using a **Proxy-based reactive core**, a **defineZestStore composition API**, and **Redux DevTools integration**, we address modern needs: performance, type safety, and debuggability. We draw on best practices from Vue3/Pinia (reactivity and modular stores) and from React state libraries (Valtio, Jotai). The result will be a scalable, type-safe state management solution that feels familiar to Vue developers, but is idiomatic for React.
+The proposed React state library will deliver **Pinia-like developer experience** in a React setting. By using a **Proxy-based reactive core**, a **defineDotzeeStore composition API**, and **Redux DevTools integration**, we address modern needs: performance, type safety, and debuggability. We draw on best practices from Vue3/Pinia (reactivity and modular stores) and from React state libraries (Valtio, Jotai). The result will be a scalable, type-safe state management solution that feels familiar to Vue developers, but is idiomatic for React.
 
 Overall, this design ensures **complete coverage** of requirements: from **reactivity implementation** and **store lifecycles** (including SSR), to **actions/getters patterns**, **TypeScript ergonomics**, and **rich DevTools support**. As Redux's own docs emphasize, a debuggable architecture "lets you log changes, use 'time-travel debugging', and even send complete error reports". We plan to match or exceed that level of introspection in a lightweight, Pinia-style library for React.

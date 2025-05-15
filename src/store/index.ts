@@ -1,15 +1,15 @@
-export { defineZestStore } from './defineZestStore';
+export { defineDotzeeStore } from './defineDotzeeStore';
 export type {
     StoreInstance,
-    DefineZestStoreOptions,
+    DefineDotzeeStoreOptions,
     StoreActions,
     StoreGetters,
     SetupStoreFunction,
-    ZestStoreHook,
+    DotzeeStoreHook,
     MappedGetters,
     StoreInstanceType,
     StoreRegistryEntry,
-    ZestRegistry
-} from './types'; 
+    DotzeeRegistry
+} from './types';
 
-export { getGlobalZestRegistry, getGlobalZestRegistry as _internal_storeRegistry, createZestRegistry, setActiveZestRegistry, resetActiveZestRegistry, getActiveZestRegistry } from './registry'; 
+export { getGlobalDotzeeRegistry, getGlobalDotzeeRegistry as _internal_storeRegistry, createDotzeeRegistry, setActiveDotzeeRegistry, resetActiveDotzeeRegistry, getActiveDotzeeRegistry } from './registry'; 

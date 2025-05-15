@@ -2,7 +2,7 @@ import { isRef } from '../reactivity/ref';
 import { isComputed } from '../reactivity/computed';
 import type { StoreRegistryEntry, StoreInstanceType } from '../store/types';
 // Import registry functions and type
-import { ZestRegistry, getActiveZestRegistry, getGlobalZestRegistry } from '../store/registry';
+import { DotzeeRegistry, getActiveDotzeeRegistry, getGlobalDotzeeRegistry } from '../store/registry';
 
 interface DevToolsExtension {
     connect(options?: DevToolsOptions): DevToolsInstance;
@@ -35,13 +35,13 @@ let connection: DevToolsInstance | null = null;
 // let appStoreRegistry: Map<string, StoreRegistryEntry<StoreInstanceType>> | null = null; // REMOVED
 let devToolsOptions: DevToolsOptions | null = null;
 
-const ZEST_DEVTOOLS_INIT_ACTION_PREFIX = '@@ZEST_INIT';
+const DOTZEE_DEVTOOLS_INIT_ACTION_PREFIX = '@@DOTZEE_INIT';
 
 /**
- * Checks if Zest DevTools integration is currently enabled and connected.
+ * Checks if Dotzee DevTools integration is currently enabled and connected.
  * @returns {boolean} True if DevTools are enabled, false otherwise.
  */
-export function isZestDevToolsEnabled(): boolean {
+export function isDotzeeDevToolsEnabled(): boolean {
     return connection !== null;
 }
 
@@ -86,22 +86,22 @@ export function getStoreStateSnapshotInternal(
                 }
             });
         } else {
-            console.warn(`[Zest DevTools] Missing initialStateKeys for options store instance. Snapshot may be incomplete or include non-state properties.`);
+            console.warn(`[Dotzee DevTools] Missing initialStateKeys for options store instance. Snapshot may be incomplete or include non-state properties.`);
         }
     }
     return snapshot;
 }
 
 /**
- * Retrieves a snapshot of the current state of all registered Zest stores
+ * Retrieves a snapshot of the current state of all registered Dotzee stores
  * from the provided registry.
- * @param registry - The ZestRegistry instance to snapshot.
+ * @param registry - The DotzeeRegistry instance to snapshot.
  * @returns An object where keys are store IDs and values are their states.
  */
-export function getGlobalZestStateSnapshot(registry: ZestRegistry): Record<string, any> {
+export function getGlobalDotzeeStateSnapshot(registry: DotzeeRegistry): Record<string, any> {
     const globalState: Record<string, any> = {};
     if (!registry) {
-        console.warn('[Zest DevTools] Cannot get global state snapshot, registry is not available.');
+        console.warn('[Dotzee DevTools] Cannot get global state snapshot, registry is not available.');
         return globalState;
     }
     registry.forEach((entry, storeId) => {
@@ -148,18 +148,18 @@ function _internal_resetStoreState(entry: StoreRegistryEntry<StoreInstanceType>,
 }
 
 /**
- * Enables Zest DevTools integration by connecting to the Redux DevTools Extension.
+ * Enables Dotzee DevTools integration by connecting to the Redux DevTools Extension.
  * Call this function once in your application setup.
  *
  * @param options Configuration options for the DevTools connection.
  */
-export function enableZestDevTools(options?: DevToolsOptions): void {
+export function enableDotzeeDevTools(options?: DevToolsOptions): void {
     if (typeof window === 'undefined' || !(window as any).__REDUX_DEVTOOLS_EXTENSION__) {
-        console.warn('[Zest DevTools] Redux DevTools Extension not found. Zest DevTools will not be enabled.');
+        console.warn('[Dotzee DevTools] Redux DevTools Extension not found. Dotzee DevTools will not be enabled.');
         return;
     }
     if (connection) {
-        console.warn('[Zest DevTools] Already enabled. Skipping.');
+        console.warn('[Dotzee DevTools] Already enabled. Skipping.');
         return;
     }
 
@@ -176,17 +176,17 @@ export function enableZestDevTools(options?: DevToolsOptions): void {
                 case 'JUMP_TO_ACTION':
                     if (message.state) {
                         try {
-                            const globalZestState = JSON.parse(message.state) as Record<string, any>;
-                            const currentActiveRegistry = getActiveZestRegistry(); // Get active registry for the jump
+                            const globalDotzeeState = JSON.parse(message.state) as Record<string, any>;
+                            const currentActiveRegistry = getActiveDotzeeRegistry(); // Get active registry for the jump
 
-                            Object.keys(globalZestState).forEach(storeId => {
+                            Object.keys(globalDotzeeState).forEach(storeId => {
                                 const storeEntry = currentActiveRegistry.get(storeId);
-                                if (storeEntry && globalZestState[storeId]) {
-                                    _internal_resetStoreState(storeEntry, globalZestState[storeId]);
+                                if (storeEntry && globalDotzeeState[storeId]) {
+                                    _internal_resetStoreState(storeEntry, globalDotzeeState[storeId]);
                                 }
                             });
                         } catch (e) {
-                            console.error('[Zest DevTools] Error parsing state for time travel:', e);
+                            console.error('[Dotzee DevTools] Error parsing state for time travel:', e);
                         }
                     }
                     break;
@@ -199,19 +199,19 @@ export function enableZestDevTools(options?: DevToolsOptions): void {
     // Stores will send their individual initial states via _internal_initStoreState
     connection.init({}); // Initialize with an empty state, stores will populate it
 
-    console.log('[Zest DevTools] Connected to Redux DevTools Extension.', devToolsOptions);
+    console.log('[Dotzee DevTools] Connected to Redux DevTools Extension.', devToolsOptions);
 }
 
 /**
  * Disconnects from the Redux DevTools Extension and cleans up.
  */
-export function disconnectZestDevTools(): void {
+export function disconnectDotzeeDevTools(): void {
     if (connection) {
         connection.unsubscribe();
         connection = null;
         // appStoreRegistry = null; // REMOVED
         devToolsOptions = null;
-        console.log('[Zest DevTools] Disconnected from Redux DevTools Extension.');
+        console.log('[Dotzee DevTools] Disconnected from Redux DevTools Extension.');
     }
 }
 
@@ -225,15 +225,15 @@ export function _internal_sendAction(
     actionName: string,
     payload: any, // Payload can be anything, devtools will display it
     // storeInstance: StoreInstanceType, // No longer needed directly here
-    currentRegistry: ZestRegistry // Pass the active/relevant registry
+    currentRegistry: DotzeeRegistry // Pass the active/relevant registry
 ): void {
     if (!connection || !currentRegistry) return;
 
     const actionType = `${storeId}/${actionName}`;
-    // console.log(`[Zest DevTools - ${storeId}] Sending action: ${actionType}`, payload);
+    // console.log(`[Dotzee DevTools - ${storeId}] Sending action: ${actionType}`, payload);
 
     // Get the complete current state of *all* stores in the provided registry
-    const globalSnapshot = getGlobalZestStateSnapshot(currentRegistry);
+    const globalSnapshot = getGlobalDotzeeStateSnapshot(currentRegistry);
 
     connection.send(
         {
@@ -254,20 +254,20 @@ export function _internal_initStoreState(
     storeId: string,
     // initialStoreState: Record<string, any>, // This is now the snapshot from getStoreStateSnapshotInternal
     storeSnapshot: Record<string, any>, // Snapshot of the specific store being initialized
-    registry: ZestRegistry
+    registry: DotzeeRegistry
 ): void {
     if (!connection || !registry) return;
 
-    // console.log(`[Zest DevTools - ${storeId}] Initializing store state with DevTools.`);
+    // console.log(`[Dotzee DevTools - ${storeId}] Initializing store state with DevTools.`);
     // When a store initializes, we send its specific initial state as the "action payload"
     // and the entire global state of the *current* registry as the state tree.
-    const globalSnapshot = getGlobalZestStateSnapshot(registry);
+    const globalSnapshot = getGlobalDotzeeStateSnapshot(registry);
 
     connection.send(
         {
-            type: `@@ZEST_INIT/${storeId}`,
+            type: `@@DOTZEE_INIT/${storeId}`,
             payload: storeSnapshot, // Send the specific store's initial snapshot as payload
-            source: '@zest-state-library',
+            source: '@dotzee',
         },
         globalSnapshot // Send the full current global state
     );

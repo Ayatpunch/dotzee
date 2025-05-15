@@ -1,5 +1,5 @@
 {
-  "name": "zest-state-library",
+  "name": "dotzee",
   "version": "0.1.0",
   "description": "A Pinia-like reactive state library for React",
   "main": "dist/index.js",
