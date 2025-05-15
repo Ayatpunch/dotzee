@@ -197,7 +197,7 @@ if (process.env.NODE_ENV === 'development') {
 *   **Plugins**: Extend Dotzee's capabilities with custom plugins.
 *   **TypeScript Usage**: Best practices for leveraging Dotzee with TypeScript.
 
-*(These would ideally link to your documentation website)*
+*https://dotzee.vercel.app*
 
 ## Contributing
 
