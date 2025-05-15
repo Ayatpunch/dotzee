@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, useLocation, Link } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 
 // Define the structure for our sidebar navigation
 const navigationItems = [
@@ -64,12 +64,6 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
-    const location = useLocation();
-
-    // Function to determine if a section should be expanded
-    const isSectionActive = (items: { path: string }[]) => {
-        return items.some(item => location.pathname === item.path || location.pathname.startsWith(item.path + '/'));
-    };
 
     // Different styling for mobile vs desktop
     const sidebarClasses = `
