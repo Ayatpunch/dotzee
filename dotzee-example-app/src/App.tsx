@@ -16,7 +16,7 @@ function App() {
       </div>
 
       <footer className="footer">
-        <p>Built with React and Dotzee · Inspired by Pinia · <a href="https://github.com/your-repo/dotzee" target="_blank" rel="noopener noreferrer">GitHub</a></p>
+        <p>Built with React and Dotzee · Inspired by Pinia · <a href="https://github.com/Ayatpunch/dotzee" target="_blank" rel="noopener noreferrer">GitHub</a></p>
       </footer>
     </div>
   );

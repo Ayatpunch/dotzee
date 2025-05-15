@@ -15,6 +15,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     // Close the sidebar when the route changes (mobile)
     useEffect(() => {
         setSidebarOpen(false);
+        window.scrollTo(0, 0)
     }, [location.pathname]);
 
     return (

@@ -324,14 +324,14 @@ This structure is a guideline and may be refined as development progresses and n
 
 4.  **Comprehensive Documentation:**
 
-    - [ ] **Getting Started Guide:** Installation, basic usage.
-    - [ ] **Core Concepts:** Reactivity, `defineDotzeeStore`, state, getters, actions.
-    - [ ] **API Reference:** Detailed documentation for all public functions and types.
-    - [ ] **Advanced Guides:** SSR, DevTools, Plugins, TypeScript usage, best practices.
-    - [ ] **Store IDs and Namespacing:** Document best practices for choosing store IDs, how uniqueness is handled, and implications for DevTools, plugins, and code-splitting.
-    - [ ] **Examples:** Multiple real-world (though simplified) examples.
-    - [ ] **Comparison with other libraries** (similar to the design doc).
-    - [ ] Set up a documentation website (e.g., using Docusaurus, VitePress).
+    - [x] **Getting Started Guide:** Installation, basic usage.
+    - [x] **Core Concepts:** Reactivity, `defineDotzeeStore`, state, getters, actions.
+    - [x] **API Reference:** Detailed documentation for all public functions and types.
+    - [x] **Advanced Guides:** SSR, DevTools, Plugins, TypeScript usage, best practices.
+    - [x] **Store IDs and Namespacing:** Document best practices for choosing store IDs, how uniqueness is handled, and implications for DevTools, plugins, and code-splitting.
+    - [x] **Examples:** Multiple real-world (though simplified) examples.
+    - [x] **Comparison with other libraries** (similar to the design doc).
+    - [x] Set up a documentation website (e.g., using Docusaurus, VitePress).
 
 5.  **Build and Packaging:**
 

@@ -5,6 +5,13 @@
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.esm.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "scripts": {
     "build": "npm run build:types && npm run build:esm && npm run build:cjs",
     "build:esm": "esbuild src/index.ts --bundle --outfile=dist/index.esm.js --platform=neutral --format=esm --target=es2020 --sourcemap --external:react --external:react-dom",
@@ -14,7 +21,8 @@
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
     "lint": "eslint . --ext .ts,.tsx --report-unused-disable-directives --max-warnings 0",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "react",
@@ -23,8 +31,12 @@
     "proxy",
     "typescript"
   ],
-  "author": "",
+  "author": "Your Name or Organization",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ayatpunch/dotzee.git"
+  },
   "devDependencies": {
     "typescript": "^5.0.0",
     "esbuild": "^0.20.0",
@@ -44,6 +56,8 @@
     "react": ">=18.0.0"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ]
 }

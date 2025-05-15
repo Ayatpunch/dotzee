@@ -74,7 +74,7 @@ const Header: React.FC<HeaderProps> = ({ onSidebarToggle, showLogo = true }) => 
         <div className="flex items-center space-x-4">
           {/* GitHub Link */}
           <a
-            href="https://github.com/yourusername/dotzee"
+            href="https://github.com/Ayatpunch/dotzee"
             target="_blank"
             rel="noopener noreferrer"
             className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-200"

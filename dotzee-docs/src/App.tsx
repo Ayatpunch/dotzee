@@ -27,6 +27,10 @@ import PluginsPage from './pages/advanced-guides/PluginsPage';
 import TypescriptPage from './pages/advanced-guides/TypescriptPage';
 import CodeSplittingPage from './pages/advanced-guides/CodeSplittingPage';
 import ExamplesPage from './pages/ExamplesPage';
+import CounterPage from './pages/examples/CounterPage';
+import TodoPage from './pages/examples/TodoPage';
+import AsyncActionsPage from './pages/examples/AsyncActionsPage';
+import SsrExamplePage from './pages/examples/SsrExamplePage';
 import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
@@ -156,6 +160,26 @@ function App() {
         <Route path="/examples" element={
           <Layout>
             <ExamplesPage />
+          </Layout>
+        } />
+        <Route path="/examples/counter" element={
+          <Layout>
+            <CounterPage />
+          </Layout>
+        } />
+        <Route path="/examples/todo" element={
+          <Layout>
+            <TodoPage />
+          </Layout>
+        } />
+        <Route path="/examples/async" element={
+          <Layout>
+            <AsyncActionsPage />
+          </Layout>
+        } />
+        <Route path="/examples/ssr" element={
+          <Layout>
+            <SsrExamplePage />
           </Layout>
         } />
         <Route path="*" element={

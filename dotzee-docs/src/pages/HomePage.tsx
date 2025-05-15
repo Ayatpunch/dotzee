@@ -117,7 +117,7 @@ function Counter() {
           <Link to="/getting-started" className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 transition-colors duration-200">
             Get Started
           </Link>
-          <a href="https://github.com/yourusername/dotzee" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center px-5 py-3 border border-gray-300 dark:border-gray-600 text-base font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
+          <a href="https://github.com/Ayatpunch/dotzee" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center px-5 py-3 border border-gray-300 dark:border-gray-600 text-base font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
             GitHub
           </a>
         </div>

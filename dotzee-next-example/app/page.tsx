@@ -40,7 +40,7 @@ export default function Page() {
                   View Demos
                 </a>
                 <a
-                  href="https://github.com/yourusername/dotzee"
+                  href="https://github.com/Ayatpunch/dotzee"
                   className="inline-flex items-center px-6 py-3 border border-gray-300 dark:border-gray-600 text-base font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"
                 >
                   GitHub
@@ -212,7 +212,7 @@ function Counter() {
           <div className="mt-8 flex justify-center">
             <div className="inline-flex rounded-md shadow">
               <a
-                href="https://github.com/yourusername/dotzee"
+                href="https://github.com/Ayatpunch/dotzee"
                 className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-indigo-700 bg-white hover:bg-indigo-50"
               >
                 Get Started
