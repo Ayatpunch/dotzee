@@ -76,8 +76,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({
                 >
                     {isCopied ? (
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M9 2a1 1 0 00-.697 1.717L10.586 6l-1.697 1.697a1 1 0 001.414 1.414L12 7.414l1.697 1.697a1 1 0 001.414-1.414L13.414 6l1.697-1.697A1 1 0 0013.414 2H9z" />
-                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.697 1.717L10.586 6l-1.697 1.697a1 1 0 001.414 1.414L12 7.414l1.697 1.697a1 1 0 001.414-1.414L13.414 6l1.697-1.697A1 1 0 0013.414 2H9zm-.707 11.293a1 1 0 100 1.414L9.586 16l-1.293 1.293a1 1 0 101.414 1.414L12 16.414l2.293 2.293a1 1 0 001.414-1.414L14.414 16l2.293-2.293a1 1 0 00-1.414-1.414L12 14.586l-2.293-2.293a1 1 0 00-1.414 0z" clipRule="evenodd" />
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                         </svg>
                     ) : (
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
