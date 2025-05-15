@@ -13,7 +13,19 @@ import StatePage from './pages/core-concepts/StatePage';
 import GettersPage from './pages/core-concepts/GettersPage';
 import ActionsPage from './pages/core-concepts/ActionsPage';
 import ApiReferencePage from './pages/ApiReferencePage';
+import DefineDotzeeStorePage from './pages/api-reference/DefineDotzeeStorePage';
+import UseDotzeeStorePage from './pages/api-reference/UseDotzeeStorePage';
+import RefPage from './pages/api-reference/RefPage';
+import ComputedPage from './pages/api-reference/ComputedPage';
+import DevToolsPage from './pages/api-reference/DevToolsPage';
+import ApiSsrPage from './pages/api-reference/SsrPage';
+import ApiPluginsPage from './pages/api-reference/PluginsPage';
 import AdvancedGuidesPage from './pages/AdvancedGuidesPage';
+import SsrPage from './pages/advanced-guides/SsrPage';
+import DevtoolsPage from './pages/advanced-guides/DevtoolsPage';
+import PluginsPage from './pages/advanced-guides/PluginsPage';
+import TypescriptPage from './pages/advanced-guides/TypescriptPage';
+import CodeSplittingPage from './pages/advanced-guides/CodeSplittingPage';
 import ExamplesPage from './pages/ExamplesPage';
 import NotFoundPage from './pages/NotFoundPage';
 
@@ -76,9 +88,69 @@ function App() {
             <ApiReferencePage />
           </Layout>
         } />
+        <Route path="/api-reference/defineDotzeeStore" element={
+          <Layout>
+            <DefineDotzeeStorePage />
+          </Layout>
+        } />
+        <Route path="/api-reference/useDotzeeStore" element={
+          <Layout>
+            <UseDotzeeStorePage />
+          </Layout>
+        } />
+        <Route path="/api-reference/ref" element={
+          <Layout>
+            <RefPage />
+          </Layout>
+        } />
+        <Route path="/api-reference/computed" element={
+          <Layout>
+            <ComputedPage />
+          </Layout>
+        } />
+        <Route path="/api-reference/devtools" element={
+          <Layout>
+            <DevToolsPage />
+          </Layout>
+        } />
+        <Route path="/api-reference/ssr" element={
+          <Layout>
+            <ApiSsrPage />
+          </Layout>
+        } />
+        <Route path="/api-reference/plugins" element={
+          <Layout>
+            <ApiPluginsPage />
+          </Layout>
+        } />
         <Route path="/advanced-guides" element={
           <Layout>
             <AdvancedGuidesPage />
+          </Layout>
+        } />
+        <Route path="/advanced-guides/ssr" element={
+          <Layout>
+            <SsrPage />
+          </Layout>
+        } />
+        <Route path="/advanced-guides/devtools" element={
+          <Layout>
+            <DevtoolsPage />
+          </Layout>
+        } />
+        <Route path="/advanced-guides/plugins" element={
+          <Layout>
+            <PluginsPage />
+          </Layout>
+        } />
+        <Route path="/advanced-guides/typescript" element={
+          <Layout>
+            <TypescriptPage />
+          </Layout>
+        } />
+        <Route path="/advanced-guides/code-splitting" element={
+          <Layout>
+            <CodeSplittingPage />
           </Layout>
         } />
         <Route path="/examples" element={

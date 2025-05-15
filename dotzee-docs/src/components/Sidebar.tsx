@@ -112,6 +112,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
                                 {section.items.map((item, itemIndex) => (
                                     <li key={itemIndex}>
                                         <NavLink
+                                            end
                                             to={item.path}
                                             className={({ isActive }) => `
                                                 block px-3 py-2 rounded-md text-sm font-medium
