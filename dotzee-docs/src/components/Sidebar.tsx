@@ -101,7 +101,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
             </div>
 
             {/* Scrollable navigation */}
-            <div className="flex-grow overflow-y-auto">
+            <div className="flex-grow overflow-y-auto sidebar-scroll">
                 <nav className="p-4 px-6">
                     {navigationItems.map((section, index) => (
                         <div key={index} className="mb-6">

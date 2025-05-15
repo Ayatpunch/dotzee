@@ -78,12 +78,11 @@ export const useCounterStore = defineDotzeeStore('counterSetup', () => {
 });`;
 
   const reactComponentExample = `import React from 'react';
-import { useDotzeeStore } from 'dotzee';
 import { useCounterStore } from './stores/counterStore';
 
 function Counter() {
-  // Access the store with the useDotzeeStore hook
-  const counter = useDotzeeStore(useCounterStore);
+  // Access the store directly
+  const counter = useCounterStore();
   
   return (
     <div className="counter">

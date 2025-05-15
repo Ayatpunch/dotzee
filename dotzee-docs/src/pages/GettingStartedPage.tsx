@@ -64,12 +64,11 @@ export const useTodoStore = defineDotzeeStore('todos', {
 
   const componentCode = `// src/components/TodoList.tsx
 import React, { useState } from 'react';
-import { useDotzeeStore } from 'dotzee';
 import { useTodoStore } from '../stores/todoStore';
 
 const TodoList = () => {
   const [newTodo, setNewTodo] = useState('');
-  const todoStore = useDotzeeStore(useTodoStore);
+  const todoStore = useTodoStore();
   
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -212,7 +211,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-md my-6">
           <h4 className="text-lg font-medium text-purple-800 dark:text-purple-300 mb-2">Key Points:</h4>
           <ul className="list-disc pl-6 text-gray-700 dark:text-gray-300">
-            <li className="mb-2">We use <code>useDotzeeStore(useTodoStore)</code> to access our store</li>
+            <li className="mb-2">We use <code>useTodoStore()</code> to access our store - direct invocation</li>
             <li className="mb-2">The store is fully reactive - updates trigger component re-renders</li>
             <li className="mb-2">Getters update automatically when their dependencies change</li>
             <li className="mb-2">Actions can be called directly from event handlers</li>
