@@ -127,7 +127,7 @@ function Counter() {
                 <span className="text-xl font-bold tracking-tight">Dotzee</span>
               </div>
               <h1 className="text-5xl md:text-6xl font-bold leading-tight mb-6">
-                Reactive State Management for <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 to-white">React</span>
+                Intuitive State Management for <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 to-white">React</span>
               </h1>
               <p className="text-xl text-indigo-100 mb-8 max-w-lg">
                 A Pinia-inspired state management solution combining Vue's reactivity system with React's component model for intuitive, type-safe state management.
