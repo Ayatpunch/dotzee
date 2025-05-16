@@ -240,9 +240,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <p className="text-gray-700 dark:text-gray-300">Learn about reactivity, state management, getters, and actions in depth.</p>
           </Link>
 
-          <Link to="/core-concepts/setup-store" className="doc-card hover:no-underline block">
-            <h3 className="text-xl font-medium text-purple-700 dark:text-purple-400 mb-2">Setup Store</h3>
-            <p className="text-gray-700 dark:text-gray-300">Explore the alternative Setup API for more flexibility with composition.</p>
+          <Link to="/core-concepts/stores" className="doc-card hover:no-underline block">
+            <h3 className="text-xl font-medium text-purple-700 dark:text-purple-400 mb-2">Stores</h3>
+            <p className="text-gray-700 dark:text-gray-300">Explore the Options API and Setup API for more flexibility with composition.</p>
           </Link>
 
           <Link to="/advanced-guides/ssr" className="doc-card hover:no-underline block">
