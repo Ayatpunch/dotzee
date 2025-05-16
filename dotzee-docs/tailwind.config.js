@@ -4,6 +4,7 @@ export default {
         "./index.html",
         "./src/**/*.{js,ts,jsx,tsx}",
     ],
+    darkMode: 'class',
     theme: {
         extend: {
             fontFamily: {
@@ -24,7 +25,44 @@ export default {
                     '900/30': 'rgba(76, 29, 149, 0.3)',
                 },
             },
+            typography: {
+                DEFAULT: {
+                    css: {
+                        maxWidth: '100%',
+                    },
+                },
+            },
+            animation: {
+                'pulse-slow': 'pulse 5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                'text-shimmer': 'shimmer 2.5s ease-in-out infinite',
+                'slowly-drift': 'drift 60s linear infinite',
+                'slowly-shift': 'shift 10s ease-in-out infinite',
+            },
+            keyframes: {
+                shimmer: {
+                    '0%, 100%': { opacity: 1 },
+                    '50%': { opacity: 0.7 },
+                },
+                drift: {
+                    '0%': {
+                        transform: 'rotate(12deg) translateY(0%)'
+                    },
+                    '100%': {
+                        transform: 'rotate(12deg) translateY(-20%)'
+                    }
+                },
+                shift: {
+                    '0%, 100%': {
+                        transform: 'translateY(0)'
+                    },
+                    '50%': {
+                        transform: 'translateY(-5px)'
+                    }
+                }
+            }
         },
     },
-    plugins: [],
+    plugins: [
+        require('@tailwindcss/typography'),
+    ],
 } 
